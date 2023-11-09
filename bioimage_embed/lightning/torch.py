@@ -45,7 +45,7 @@ class LitAutoEncoderTorch(pl.LightningModule):
 
     def forward(self, batch):
         x = self.batch_to_tensor(batch)
-        return self.model(x)
+        return {**x,**self.model(x)}
 
     def get_results(self, batch):
         # if self.PYTHAE_FLAG:
@@ -57,7 +57,7 @@ class LitAutoEncoderTorch(pl.LightningModule):
         return {"data": batch}
 
     def embedding_from_output(self, model_output):
-        return model_output.z.view(model_output.z.shape[0], -1)
+        return model_output["z"].view(model_output["z"].shape[0], -1)
 
     def get_model_output(self, x, batch_idx):
         model_output = self.model(x, epoch=batch_idx)
@@ -125,7 +125,7 @@ class LitAutoEncoderTorch(pl.LightningModule):
         self.logger.experiment.add_scalar("Loss/val", loss, batch_idx)
         self.logger.experiment.add_image(
             "val",
-            torchvision.utils.make_grid(model_output.recon_x),
+            torchvision.utils.make_grid(model_output["recon_x"]),
             batch_idx,
         )
 

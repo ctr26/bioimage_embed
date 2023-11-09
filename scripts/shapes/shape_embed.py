@@ -1,7 +1,6 @@
 # %%
 import seaborn as sns
 import pyefd
-import tikzplotlib
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_validate, KFold, train_test_split
 from sklearn.metrics import make_scorer
@@ -14,8 +13,7 @@ import umap
 from torch.autograd import Variable
 from types import SimpleNamespace
 import numpy as np
-import tikzplotlib
-
+import logging
 from skimage import measure
 import umap.plot
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
@@ -49,6 +47,8 @@ import matplotlib.pyplot as plt
 from bioimage_embed.lightning import DataModule
 import matplotlib as mpl
 from matplotlib import rc
+
+logger = logging.getLogger(__name__)
 
 
 def scoring_df(X, y):
@@ -107,7 +107,6 @@ def shape_embed_process():
         "batch_size": 4,
         "num_workers": 2**4,
         # "window_size": 64*2,
-        "num_workers": 1,
         "input_dim": (1, window_size, window_size),
         # "channels": 3,
         "latent_dim": 16,
@@ -144,7 +143,7 @@ def shape_embed_process():
     # input_dim = (params["channels"], params["window_size"], params["window_size"])
     args = SimpleNamespace(**params, **optimizer_params, **lr_scheduler_params)
 
-    dataset_path = "bbbc010"
+    dataset_path = "bbbc010/BBBC010_v1_foreground_eachworm"
     # dataset_path = "vampire/mefs/data/processed/Control"
     #dataset_path = "shape_embed_data/data/vampire/torchvision/Control/"
     # dataset_path = "vampire/torchvision/Control"
@@ -292,9 +291,7 @@ def shape_embed_process():
         min_epochs=50,
         max_epochs=args.epochs,
     )
-
     # %%
-
     try:
         trainer.fit(
             lit_model, datamodule=dataloader, ckpt_path=f"{model_dir}/last.ckpt"
@@ -309,7 +306,7 @@ def shape_embed_process():
     example_input = Variable(torch.rand(1, *args.input_dim))
 
     # torch.jit.save(lit_model.to_torchscript(), f"{model_dir}/model.pt")
-    torch.onnx.export(lit_model, example_input, f"{model_dir}/model.onnx")
+    # torch.onnx.export(lit_model, example_input, f"{model_dir}/model.onnx")
 
     # %%
     # Inference
@@ -327,29 +324,39 @@ def shape_embed_process():
     dataloader.setup()
 
     predictions = trainer.predict(lit_model, datamodule=dataloader)
-    latent_space = torch.stack(
-        [prediction.z.flatten() for prediction in predictions[:-1]], dim=0
-    )
+    latent_space = torch.stack([d["z"].flatten() for d in predictions])
+    scalings = torch.stack([d["scalings"].flatten() for d in predictions])
 
     idx_to_class = {v: k for k, v in dataset.dataset.class_to_idx.items()}
 
-    y = np.array([int(data[-1]) for data in dataloader.predict_dataloader()])[:-1]
+    y = np.array([int(data[-1]) for data in dataloader.predict_dataloader()])
 
     y_partial = y.copy()
     indices = np.random.choice(y.size, int(0.3 * y.size), replace=False)
-
     y_partial[indices] = -1
-
+    y_blind = -1 * np.ones_like(y)
+    umap_labels = y_blind
     classes = np.array([idx_to_class[i] for i in y])
 
-    mapper = umap.UMAP().fit(latent_space.numpy(), y=y)
+    n_components = 64  # Number of UMAP components
+    component_names = [f"umap{i}" for i in range(n_components)]  # List of column names
+
+    logger.info("UMAP fitting")
+    mapper = umap.UMAP(n_components=64, random_state=42).fit(
+        latent_space.numpy(), y=umap_labels
+    )
+
+    logger.info("UMAP transforming")
     semi_supervised_latent = mapper.transform(latent_space.numpy())
 
-    df = pd.DataFrame(semi_supervised_latent, columns=["umap0", "umap1"])
+    df = pd.DataFrame(semi_supervised_latent, columns=component_names)
     df["Class"] = y
     # Map numeric classes to their labels
     idx_to_class = {0: "alive", 1: "dead"}
     df["Class"] = df["Class"].map(idx_to_class)
+    df["Scale"] = scalings
+    df = df.set_index("Class")
+    df_shape_embed = df.copy()
 
     ax = sns.relplot(
         data=df,
@@ -378,10 +385,9 @@ def shape_embed_process():
 
     # %%
 
-    X = latent_space.numpy()
-    y = classes
+    X = df_shape_embed.to_numpy()
+    y = df_shape_embed.index.values
 
-    dfs = []
     properties = [
         "area",
         "perimeter",
@@ -435,7 +441,11 @@ def shape_embed_process():
     df_pyefd = pd.concat(dfs)
 
     trials = [
-        {"name": "mask_embed", "features": latent_space.numpy(), "labels": classes},
+        {
+            "name": "mask_embed",
+            "features": df_shape_embed.to_numpy(),
+            "labels": df_shape_embed.index,
+        },
         {
             "name": "fourier_coeffs",
             "features": df_pyefd.xs("coeffs", level="coeffs"),

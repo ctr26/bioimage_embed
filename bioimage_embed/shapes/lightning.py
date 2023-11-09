@@ -14,7 +14,12 @@ class MaskEmbed(LitAutoEncoderTorch):
         super().__init__(model, args)
 
     def batch_to_tensor(self, batch):
-        return super().batch_to_tensor(batch[0].float())
+        x = batch[0].float()
+        output = super().batch_to_tensor(x)
+        froebenius_norm = torch.norm(
+            output["data"], p="fro", dim=(-2, -1), keepdim=True
+        )
+        return {"data": x / froebenius_norm, "scalings": froebenius_norm}
 
     def loss_function(self, model_output, *args, **kwargs):
         loss_ops = lf.DistanceMatrixLoss(model_output.recon_x, norm=True)
@@ -110,4 +115,3 @@ class MaskEmbedLatentAugment(MaskEmbed):
     def configure_optimizers(self):
         opt_ed, lr_s_ed = self.timm_optimizers(self.model)
         return self.timm_to_lightning(optimizer=opt_ed, lr_scheduler=lr_s_ed)
-
