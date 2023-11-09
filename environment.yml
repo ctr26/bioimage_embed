@@ -1,10 +1,9 @@
 # name: bioimage_embed
 channels:
-  # - bioconda
-  - pytorch
   - conda-forge
-  # - defaults
+  - defaults
   - torch
+  - bioconda
 dependencies:
   - cudatoolkit-dev=10
   - python=3.9
@@ -14,7 +13,8 @@ dependencies:
   - libgcc
   - pytorch
   - pillow=9.5.0
+  - snakemake-minimal
   - pip
   - pip:
-    - -e .
-    - nonechucks
+      - -e .
+      - nonechucks
