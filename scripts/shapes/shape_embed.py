@@ -146,7 +146,7 @@ def shape_embed_process():
 
     dataset_path = "bbbc010"
     # dataset_path = "vampire/mefs/data/processed/Control"
-    # dataset_path = "bbbc010/BBBC010_v1_foreground_eachworm"
+    #dataset_path = "shape_embed_data/data/vampire/torchvision/Control/"
     # dataset_path = "vampire/torchvision/Control"
     # dataset = "bbbc010"
     model_name = "vqvae"

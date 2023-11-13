@@ -31,7 +31,7 @@ from sklearn.manifold import MDS
 from sklearn.metrics.pairwise import euclidean_distances
 from scipy.ndimage import convolve, sobel
 from skimage.measure import find_contours
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, splprep, splev
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -233,24 +233,12 @@ class ImageToCoords(torch.nn.Module):
         # np_image = np_image_full[i]
         # im_height, im_width = np_image.shape
 
-        contour = find_contours(np_image)
+        contour = find_contours(np_image, 0.8)
         contour_y, contour_x = contour[0][:, 0], contour[0][:, 1]
-        # plt.scatter(contour_x,contour_y)
-        # plt.show()
-        #  %%
-        rho, phi = self.cart2pol(contour_x, contour_y)
-
-        rho_interp = interp1d(np.linspace(0, 1, len(rho)), rho, kind="cubic")(
-            np.linspace(0, 1, size)
-        )
-        phi_interp = interp1d(np.linspace(0, 1, len(phi)), phi, kind="cubic")(
-            np.linspace(0, 1, size)
-        )
-
-        xii, yii = np.divide(self.pol2cart(rho_interp, phi_interp), scaling)
-        xii, yii = self.pol2cart(rho_interp, phi_interp)
-        # distograms.append(euclidean_distances(np.array([xii,yii]).T))
-        return np.array([xii, yii])
+        # create the spline
+        tck, u = splprep([contour_x, contour_y], s = 0)
+        u_new = np.linspace(u.min(), u.max(), size)
+        return np.array(splev(u_new, tck))
 
     def cart2pol(self, x, y):
         return (np.sqrt(x**2 + y**2), np.arctan2(y, x))
