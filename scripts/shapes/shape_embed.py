@@ -48,6 +48,7 @@ from bioimage_embed.lightning import DataModule
 import matplotlib as mpl
 from matplotlib import rc
 
+import logging
 logger = logging.getLogger(__name__)
 
 
