@@ -19,7 +19,8 @@ class MaskEmbed(LitAutoEncoderTorch):
         froebenius_norm = torch.norm(
             output["data"], p="fro", dim=(-2, -1), keepdim=True
         )
-        return {"data": x / froebenius_norm, "scalings": froebenius_norm}
+        normalised_data = x.shape[-1]*x/froebenius_norm
+        return {"data": normalised_data, "scalings": froebenius_norm}
 
     def loss_function(self, model_output, *args, **kwargs):
         loss_ops = lf.DistanceMatrixLoss(model_output.recon_x, norm=True)
