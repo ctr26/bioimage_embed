@@ -117,9 +117,11 @@ class ResNet18VQVAEDecoder(BaseDecoder):
             self.latent_dim, self.input_height, first_conv, maxpool1
         )
         self.fc1 = nn.Linear(512, 256)
-
+        self.postquantized = nn.Conv2d(self.latent_dim, self.latent_dim, 1, 1)
+        
     def forward(self, x):
         # x = self.fc1(x)
-        x = self.decoder(x)
+        x = self.postquantized(x)
+        x = x.view(-1, self.latent_dim)
         # x = self.fc1(x)
         return ModelOutput(reconstruction=x)
