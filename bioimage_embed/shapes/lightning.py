@@ -7,7 +7,7 @@ import numpy as np
 from torch import nn
 from ..lightning import LitAutoEncoderTorch
 from . import loss_functions as lf
-
+from pythae.models.base.base_utils import ModelOutput
 
 class MaskEmbed(LitAutoEncoderTorch):
     def __init__(self, model, args=None):
@@ -20,7 +20,7 @@ class MaskEmbed(LitAutoEncoderTorch):
             output["data"], p="fro", dim=(-2, -1), keepdim=True
         )
         normalised_data = x.shape[-1]*x/froebenius_norm
-        return {"data": normalised_data, "scalings": froebenius_norm}
+        return ModelOutput(data=normalised_data,scalings=froebenius_norm)
 
     def loss_function(self, model_output, *args, **kwargs):
         loss_ops = lf.DistanceMatrixLoss(model_output.recon_x, norm=True)

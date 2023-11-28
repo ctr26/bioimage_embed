@@ -6,7 +6,7 @@ from timm import optim, scheduler
 from types import SimpleNamespace
 import argparse
 import timm
-
+from pythae.models.base.base_utils import ModelOutput
 
 class LitAutoEncoderTorch(pl.LightningModule):
     args = argparse.Namespace(
@@ -45,7 +45,7 @@ class LitAutoEncoderTorch(pl.LightningModule):
 
     def forward(self, batch):
         x = self.batch_to_tensor(batch)
-        return {**x,**self.model(x)}
+        return ModelOutput(x=x, out=self.model(x))
 
     def get_results(self, batch):
         # if self.PYTHAE_FLAG:
@@ -54,10 +54,10 @@ class LitAutoEncoderTorch(pl.LightningModule):
         # return self.model.forward(batch)
 
     def batch_to_tensor(self, batch):
-        return {"data": batch}
+        return ModelOutput(data=batch)
 
     def embedding_from_output(self, model_output):
-        return model_output["z"].view(model_output["z"].shape[0], -1)
+        return model_output.z.view(model_output.z.shape[0], -1)
 
     def get_model_output(self, x, batch_idx):
         model_output = self.model(x, epoch=batch_idx)
