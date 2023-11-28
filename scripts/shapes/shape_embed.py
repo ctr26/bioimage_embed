@@ -49,6 +49,7 @@ import matplotlib as mpl
 from matplotlib import rc
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -104,17 +105,17 @@ def shape_embed_process():
     window_size = 128 * 2
 
     params = {
+        "model":"resnet50_vqvae",
         "epochs": 75,
         "batch_size": 4,
         "num_workers": 2**4,
-        # "window_size": 64*2,
-        "input_dim": (1, window_size, window_size),
-        # "channels": 3,
-        "latent_dim": 16,
-        "num_embeddings": 16,
-        "num_hiddens": 16,
+        "input_dim": (3, interp_size, interp_size),
+        "latent_dim": interp_size,
+        "num_embeddings": interp_size,
+        "num_hiddens": interp_size,
         "num_residual_hiddens": 32,
         "num_residual_layers": 150,
+        "pretrained": True,
         # "embedding_dim": 32,
         # "num_embeddings": 16,
         "commitment_cost": 0.25,
@@ -139,25 +140,21 @@ def shape_embed_process():
         "cycle_momentum": False,
     }
 
-    # channels = 3
-
-    # input_dim = (params["channels"], params["window_size"], params["window_size"])
     args = SimpleNamespace(**params, **optimizer_params, **lr_scheduler_params)
 
     dataset_path = "bbbc010/BBBC010_v1_foreground_eachworm"
     # dataset_path = "vampire/mefs/data/processed/Control"
-    #dataset_path = "shape_embed_data/data/vampire/torchvision/Control/"
+    # dataset_path = "shape_embed_data/data/vampire/torchvision/Control/"
     # dataset_path = "vampire/torchvision/Control"
     # dataset = "bbbc010"
-    model_name = "vqvae"
 
     # train_data_path = f"scripts/shapes/data/{dataset_path}"
     train_data_path = f"data/{dataset_path}"
-    metadata = lambda x: f"results/{dataset_path}_{model_name}/{x}"
+    metadata = lambda x: f"results/{dataset_path}_{args.model}/{x}"
 
     path = Path(metadata(""))
     path.mkdir(parents=True, exist_ok=True)
-    model_dir = f"models/{dataset_path}_{model_name}"
+    model_dir = f"models/{dataset_path}_{args.model}"
     # %%
 
     transform_crop = CropCentroidPipeline(window_size)
@@ -238,10 +235,12 @@ def shape_embed_process():
 
     # Close the plot
     plt.close()
-
+    # import albumentations as A
     # %%
-
-    transform = transforms.Compose([transform_mask_to_dist, transforms.ToTensor()])
+    gray2rgb = transforms.Lambda(lambda x: x.repeat(3, 1, 1))
+    transform = transforms.Compose(
+        [transform_mask_to_dist, transforms.ToTensor(), gray2rgb]
+    )
 
     dataset = datasets.ImageFolder(train_data_path, transform=transform)
 
@@ -265,10 +264,22 @@ def shape_embed_process():
         num_workers=args.num_workers,
     )
 
-    model = bioimage_embed.models.create_model("resnet18_vqvae_legacy", **vars(args))
+    # model = bioimage_embed.models.create_model("resnet18_vqvae_legacy", **vars(args))
+    # 
+    model = bioimage_embed.models.create_model(
+        model=args.model,
+        input_dim=args.input_dim,
+        latent_dim=args.latent_dim,
+        pretrained=args.pretrained,
+    )
 
-    lit_model = shapes.MaskEmbedLatentAugment(model, args)
+    # model = bioimage_embed.models.factory.ModelFactory(**vars(args)).resnet50_vqvae_legacy()
+
+    # lit_model = shapes.MaskEmbedLatentAugment(model, args)
     lit_model = shapes.MaskEmbed(model, args)
+    test_data = dataset[0][0].unsqueeze(0)
+    # test_lit_data = 2*(dataset[0][0].unsqueeze(0).repeat_interleave(3, dim=1),)
+    test_output = lit_model.forward((test_data,))
 
     dataloader.setup()
     model.eval()
@@ -292,13 +303,13 @@ def shape_embed_process():
         min_epochs=50,
         max_epochs=args.epochs,
     )
-    # %%
-    try:
-        trainer.fit(
-            lit_model, datamodule=dataloader, ckpt_path=f"{model_dir}/last.ckpt"
-        )
-    except:
-        trainer.fit(lit_model, datamodule=dataloader)
+    # # %%
+    # try:
+    #     trainer.fit(
+    #         lit_model, datamodule=dataloader, ckpt_path=f"{model_dir}/last.ckpt"
+    #     )
+    # except:
+    #     trainer.fit(lit_model, datamodule=dataloader)
 
     lit_model.eval()
 
