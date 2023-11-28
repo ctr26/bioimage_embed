@@ -13,7 +13,6 @@ from pl_bolts.models.autoencoders import (
 
 
 class ResNet50VQVAEEncoder(BaseEncoder):
-
     enc_out_dim = 2048
     enc_out_dim_headless = 32
 
@@ -56,32 +55,7 @@ class ResNet50VQVAEEncoder(BaseEncoder):
         return ModelOutput(embedding=embedding)
 
 
-class ResNet50VQVAEDecoder(BaseDecoder):
-    def __init__(
-        self, model_config: VAEConfig, first_conv=False, maxpool1=False, **kwargs
-    ):
-        super(ResNet50VQVAEDecoder, self).__init__()
-        self.latent_dim = model_config.latent_dim
-        self.input_height = model_config.input_dim[-1]
-        self.decoder = resnet50_decoder(self.latent_dim, self.input_height, first_conv, maxpool1)
-        # self.decoder.linear = nn.Identity()
-        self.postquantized = nn.Conv2d(self.latent_dim, self.latent_dim, 1, 1)
-        # self.fc = nn.Linear(self.enc_out_dim, latent_dim)
-
-    def forward(self, inputs):
-        # a = nn.Conv2d(16,512,1,1)
-        x = self.postquantized(inputs)
-        x = x.view(-1, self.latent_dim)
-        # x = (latent_dim, 512, input_height, input_height)
-        # decoder is expecting 
-        # self.decoder(x)
-        x = self.decoder(x)
-
-        return ModelOutput(reconstruction=x)
-
-
 class ResNet18VQVAEEncoder(BaseEncoder):
-
     enc_out_dim = 512
 
     def __init__(
@@ -105,23 +79,44 @@ class ResNet18VQVAEEncoder(BaseEncoder):
         return ModelOutput(embedding=embedding, log_covariance=log_covariance)
 
 
-class ResNet18VQVAEDecoder(BaseDecoder):
+class BaseResNetVQVAEDecoder(BaseDecoder):
     def __init__(
-        self, model_config: VAEConfig, first_conv=False, maxpool1=False, **kwargs
+        self,
+        model_config: VAEConfig,
+        resnet_decoder,
+        first_conv=False,
+        maxpool1=False,
+        **kwargs
     ):
-        super(ResNet18VQVAEDecoder, self).__init__()
+        super(BaseResNetVQVAEDecoder, self).__init__()
         self.model_config = model_config
         self.latent_dim = model_config.latent_dim
         self.input_height = model_config.input_dim[-2]
-        self.decoder = resnet18_decoder(
+        self.decoder = resnet_decoder(
             self.latent_dim, self.input_height, first_conv, maxpool1
         )
-        self.fc1 = nn.Linear(512, 256)
         self.postquantized = nn.Conv2d(self.latent_dim, self.latent_dim, 1, 1)
-        
+
     def forward(self, x):
-        # x = self.fc1(x)
         x = self.postquantized(x)
         x = x.view(-1, self.latent_dim)
-        # x = self.fc1(x)
+        x = self.decoder(x)
         return ModelOutput(reconstruction=x)
+
+
+class ResNet50VQVAEDecoder(BaseResNetVQVAEDecoder):
+    def __init__(
+        self, model_config: VAEConfig, first_conv=False, maxpool1=False, **kwargs
+    ):
+        super(ResNet50VQVAEDecoder, self).__init__(
+            model_config, resnet50_decoder, first_conv, maxpool1, **kwargs
+        )
+
+
+class ResNet18VQVAEDecoder(BaseResNetVQVAEDecoder):
+    def __init__(
+        self, model_config: VAEConfig, first_conv=False, maxpool1=False, **kwargs
+    ):
+        super(ResNet18VQVAEDecoder, self).__init__(
+            model_config, resnet18_decoder, first_conv, maxpool1, **kwargs
+        )
