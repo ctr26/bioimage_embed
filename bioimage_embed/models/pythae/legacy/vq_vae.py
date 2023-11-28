@@ -112,17 +112,36 @@ class VQVAE(models.VQVAE):
 
 
 class VAE(models.VAE):
-    def __init__(self, model_config: VAEConfig, **kwargs):
+    def __init__(
+        self,
+        model_config: VAEConfig,
+        num_hiddens=64,
+        num_residual_hiddens=18,
+        num_residual_layers=2,
+        **kwargs
+    ):
         super(models.BaseAE, self).__init__()
         # super(nn.Module)
         # input_dim (tuple) – The input_data dimension.
 
         self.model_name = "VAE"
         self.model_config = model_config
-        self.encoder = VAEEncoder(model_config, **kwargs)
-        self.decoder = VAEDecoder(model_config, **kwargs)
+        self.encoder = VAEEncoder(
+            model_config,
+            num_hiddens=num_hiddens,
+            num_residual_hiddens=num_residual_hiddens,
+            num_residual_layers=num_residual_layers,
+            **kwargs,
+        )
+        self.decoder = VAEDecoder(
+            model_config,
+            num_hiddens=num_hiddens,
+            num_residual_hiddens=num_residual_hiddens,
+            num_residual_layers=num_residual_layers,
+            **kwargs,
+        )
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(kwargs["num_hiddens"], model_config.latent_dim * 2)
+        self.fc = nn.Linear(num_hiddens, model_config.latent_dim * 2)
         # shape is (batch_size, model_config.num_hiddens, 1, 1)
 
     def reparameterize(self, mu, log_var):
