@@ -49,7 +49,7 @@ class VAEDecoder(BaseDecoder):
         self.model = ResnetDecoder(
             in_channels=model_config.latent_dim,
             out_channels=model_config.input_dim[0],
-            **{**vars(model_config), **kwargs}
+            **{**vars(model_config), **kwargs},
         )
 
     def forward(self, x):
@@ -72,13 +72,16 @@ class VQVAE(models.VQVAE):
         self.model = legacy.vq_vae.VQ_VAE(
             channels=model_config.input_dim[0],
             embedding_dim=model_config.latent_dim,
-            **{**vars(model_config), **kwargs}
+            num_hiddens=model_config.latent_dim,
+            **{
+                **vars(model_config),
+                **kwargs,
+            },
         )
         self.encoder = self.model._encoder
         self.decoder = self.model._decoder
         # This isn't completely necessary for training I don't think
         # self._set_quantizer(model_config)
-        self.quantizer = self.model._vq_vae
 
     def forward(self, x, epoch=None):
         # loss, x_recon, perplexity = self.model.forward(x["data"])
@@ -106,7 +109,7 @@ class VQVAE(models.VQVAE):
             recon_x=x_recon,
             z=quantized,
             quantized_indices=indices[0],
-            **loss_dict
+            **loss_dict,
         )
         # return ModelOutput(reconstruction=x_recon, **loss_dict)
 
