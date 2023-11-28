@@ -109,10 +109,11 @@ class ModelFactory:
         )
 
     def resnet_vae_legacy(self, depth):
+
         return self.create_model(
             pythae.models.VAEConfig,
             # partial(legacy.vq_vae.VQVAE,**self.kwargs,num_hidden_residuals=depth),
-            partial(legacy.VAE, num_hidden_residuals=depth, **self.kwargs),
+            partial(legacy.VAE,num_residual_hiddens=depth),
             encoder_class=lambda x: None,
             decoder_class=lambda x: None,
         )
@@ -127,7 +128,7 @@ class ModelFactory:
         return self.create_model(
             pythae.models.VQVAEConfig,
             # partial(legacy.vq_vae.VQVAE,**self.kwargs,num_hidden_residuals=depth),
-            partial(legacy.vq_vae.VQVAE, num_hidden_residuals=depth, **self.kwargs),
+            partial(legacy.vq_vae.VQVAE, num_hidden_residuals=depth),
             encoder_class=lambda x: None,
             decoder_class=lambda x: None,
         )
