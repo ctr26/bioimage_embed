@@ -2,6 +2,7 @@ from torch import nn
 from pythae.models.base.base_utils import ModelOutput
 from pythae.models.nn import BaseDecoder, BaseEncoder
 
+from pl_bolts.models import autoencoders
 from pythae.models import VQVAE, VQVAEConfig, VAE, VAEConfig
 
 from pl_bolts.models.autoencoders import (
@@ -13,7 +14,6 @@ from pl_bolts.models.autoencoders import (
 
 
 class ResNet50VAEEncoder(BaseEncoder):
-
     enc_out_dim = 2048
 
     def __init__(
@@ -46,7 +46,7 @@ class ResNet50VAEDecoder(BaseDecoder):
         super(ResNet50VAEDecoder, self).__init__()
         latent_dim = model_config.latent_dim
         input_height = model_config.input_dim[-2]
-        self.decoder = resnet18_decoder(latent_dim, input_height, first_conv, maxpool1)
+        self.decoder = resnet50_decoder(latent_dim, input_height, first_conv, maxpool1)
 
     def forward(self, x):
         output = ModelOutput()
@@ -58,7 +58,6 @@ class ResNet50VAEDecoder(BaseDecoder):
 
 
 class ResNet18VAEEncoder(BaseEncoder):
-
     enc_out_dim = 512
 
     def __init__(
@@ -150,11 +149,26 @@ class ResNet18VAEDecoder(BaseDecoder):
 #     def __init__(self, model_config: VAEConfig, first_conv=False, maxpool1=False, **kwargs):
 #         super().__init__(model_config, resnet18_decoder, first_conv=first_conv, maxpool1=maxpool1, **kwargs)
 
-from pl_bolts.models import autoencoders
+from pythae import models
+from pythae.models import VQVAEConfig, VAEConfig
 
-class VAEPythaeWrapper(nn.Module):
-    def __init__(self,input_height,latent_dim, enc_type="resnet50", enc_out_dim=512, first_conv=False, maxpool1=False, kl_coeff=0.1):
-        super().__init__()
+
+class VAEPythaeWrapper(models.VAE):
+    def __init__(
+        self,
+        model_config,
+        input_height,
+        enc_type="resnet18",
+        enc_out_dim=512,
+        first_conv=False,
+        maxpool1=False,
+        kl_coeff=0.1,
+        encoder=None,
+        decoder=None,
+    ):
+        super(models.BaseAE, self).__init__()
+        self.model_name = "VAE_bolt"
+        self.model_config = model_config
         self.model = autoencoders.VAE(
             input_height=input_height,
             enc_type=enc_type,
@@ -162,14 +176,17 @@ class VAEPythaeWrapper(nn.Module):
             first_conv=first_conv,
             maxpool1=maxpool1,
             kl_coeff=kl_coeff,
-            latent_dim=latent_dim,
-
+            latent_dim=model_config.latent_dim,
         )
+        self.encoder = self.model.encoder
+        self.decoder = self.model.decoder
 
-    def forward(self, x,epoch=None):
-        x_recon = self.model(x["data"])
-        z,recon_x,p,q = self.model._run_step(x["data"])
-        _,logs = self.model.step((x["data"],x["data"]),batch_idx=epoch)
-        return ModelOutput(recon_x=recon_x, z=z, **logs)
-                           
-    
+    def forward(self, x, epoch=None):
+        # return ModelOutput(x=x,recon_x=x,z=x,loss=1)
+        # # Forward pass logic
+        x = x["data"]
+        x_recon = self.model(x)
+        z, recon_x, p, q = self.model._run_step(x)
+        loss, logs = self.model.step((x, x), batch_idx=epoch)
+
+        return ModelOutput(recon_x=recon_x, z=z, logs=logs, loss=loss)
