@@ -8,6 +8,7 @@ from torch import nn
 from ..lightning import LitAutoEncoderTorch
 from . import loss_functions as lf
 from pythae.models.base.base_utils import ModelOutput
+from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 
 class MaskEmbed(LitAutoEncoderTorch):
     def __init__(self, model, args=None):
