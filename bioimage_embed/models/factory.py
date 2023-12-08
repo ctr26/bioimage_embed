@@ -1,4 +1,6 @@
 # import torch
+from torch import nn
+
 # import torch.nn.functional as F
 
 # Note - you must have torchvision installed for this example
@@ -31,28 +33,50 @@ class ModelFactory:
         self, model_config_class, model_class, encoder_class, decoder_class
     ):
         model_config = model_config_class(
-            input_dim=self.input_dim,
+            input_dim=tuple(self.input_dim),
             latent_dim=self.latent_dim,
         )
         encoder = encoder_class(model_config)
         decoder = decoder_class(model_config)
         # TODO Fix this
         return model_class(
-            model_config=model_config, encoder=encoder, decoder=decoder, **self.kwargs
+            model_config=model_config,
+            encoder=encoder,
+            decoder=decoder,
         )
 
     def resnet_vae_bolt(
-        self, enc_type, enc_out_dim, first_conv=False, maxpool1=False, kl_coeff=0.1
+        self,
+        enc_type,
+        enc_out_dim,
+        first_conv=False,
+        maxpool1=False,
+        kl_coeff=1.0,
     ):
-        return bolts.vae.VAEPythaeWrapper(
-            input_height=self.input_dim[1],
-            enc_type=enc_type,
-            enc_out_dim=enc_out_dim,
-            first_conv=first_conv,
-            maxpool1=maxpool1,
-            kl_coeff=kl_coeff,
-            latent_dim=self.latent_dim,
+        return self.create_model(
+            pythae.models.VAEConfig,
+            partial(
+                bolts.vae.VAEPythaeWrapper,
+                input_height=self.input_dim[1],
+                enc_type=enc_type,
+                enc_out_dim=enc_out_dim,
+                first_conv=first_conv,
+                maxpool1=maxpool1,
+                kl_coeff=kl_coeff,
+            ),
+            encoder_class=lambda x: None,
+            decoder_class=lambda x: None,
         )
+
+    # bolts.vae.VAEPythaeWrapper(
+    #         input_height=self.input_dim[1],
+    #         enc_type=enc_type,
+    #         enc_out_dim=enc_out_dim,
+    #         first_conv=first_conv,
+    #         maxpool1=maxpool1,
+    #         kl_coeff=kl_coeff,
+    #         latent_dim=self.latent_dim,
+    #     )
 
     def resnet18_vae_bolt(self, **kwargs):
         return self.resnet_vae_bolt(enc_type="resnet18", enc_out_dim=512, **kwargs)
@@ -66,6 +90,7 @@ class ModelFactory:
                 pythae.models.VAEConfig,
                 use_default_encoder=False,
                 use_default_decoder=False,
+                **self.kwargs
             ),
             pythae.models.VAE,
             bolts.ResNet18VAEEncoder,
@@ -78,6 +103,7 @@ class ModelFactory:
                 pythae.models.VAEConfig,
                 use_default_encoder=False,
                 use_default_decoder=False,
+                **self.kwargs
             ),
             pythae.models.VAE,
             bolts.ResNet50VAEEncoder,
@@ -90,6 +116,7 @@ class ModelFactory:
                 pythae.models.VQVAEConfig,
                 use_default_encoder=False,
                 use_default_decoder=False,
+                **self.kwargs
             ),
             pythae.models.VQVAE,
             bolts.ResNet18VQVAEEncoder,
@@ -102,6 +129,7 @@ class ModelFactory:
                 pythae.models.VQVAEConfig,
                 use_default_encoder=False,
                 use_default_decoder=False,
+                **self.kwargs
             ),
             pythae.models.VQVAE,
             bolts.ResNet50VQVAEEncoder,
@@ -109,11 +137,9 @@ class ModelFactory:
         )
 
     def resnet_vae_legacy(self, depth):
-
         return self.create_model(
             pythae.models.VAEConfig,
-            # partial(legacy.vq_vae.VQVAE,**self.kwargs,num_hidden_residuals=depth),
-            partial(legacy.VAE,num_residual_hiddens=depth),
+            partial(legacy.VAE, num_residual_hiddens=depth),
             encoder_class=lambda x: None,
             decoder_class=lambda x: None,
         )
@@ -128,7 +154,7 @@ class ModelFactory:
         return self.create_model(
             pythae.models.VQVAEConfig,
             # partial(legacy.vq_vae.VQVAE,**self.kwargs,num_hidden_residuals=depth),
-            partial(legacy.vq_vae.VQVAE, num_hidden_residuals=depth),
+            partial(legacy.vq_vae.VQVAE, depth=depth),
             encoder_class=lambda x: None,
             decoder_class=lambda x: None,
         )
@@ -165,9 +191,28 @@ MODELS = [
     "resnet50_vae_legacy",
 ]
 
+from typing import Tuple
+
 
 def create_model(
-    model, input_dim, latent_dim, pretrained=False, progress=True, **kwargs
+    model: str,
+    input_dim: Tuple[int, int, int],
+    latent_dim: int,
+    pretrained=False,
+    progress=True,
+    **kwargs
 ):
     factory = ModelFactory(input_dim, latent_dim, pretrained, progress, **kwargs)
     return getattr(factory, model)()
+
+
+class CreateModel(nn.Module):
+    def __init__(
+        self, model, input_dim, latent_dim, pretrained=False, progress=True, **kwargs
+    ):
+        getattr(
+            super(ModelFactory, self).__init__(
+                input_dim, latent_dim, pretrained, progress, **kwargs
+            ),
+            model,
+        )
