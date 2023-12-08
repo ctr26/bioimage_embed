@@ -8,6 +8,7 @@ import argparse
 import timm
 from pythae.models.base.base_utils import ModelOutput
 
+
 class LitAutoEncoderTorch(pl.LightningModule):
     args = argparse.Namespace(
         opt="adamw",
@@ -34,13 +35,19 @@ class LitAutoEncoderTorch(pl.LightningModule):
         warmup_t=0,
     )
 
-    def __init__(self, model, args=None):
+    def __init__(self, model,args,**kwargs):
         super().__init__()
         self.model = model
         self.model = self.model.to(self.device)
+        # Flatten hparams
+        self.encoder = self.model.encoder
+        self.decoder = self.model.decoder
         if args:
             self.args = SimpleNamespace(**{**vars(args), **vars(self.args)})
-        self.save_hyperparameters()
+        if kwargs:
+            merged_kwargs = {k: v for d in kwargs.values() for k, v in d.items()}
+            self.args = SimpleNamespace(**{**merged_kwargs, **vars(self.args)})
+        self.save_hyperparameters(self.args)
         # self.model.train()
 
     def forward(self, batch):
@@ -109,7 +116,7 @@ class LitAutoEncoderTorch(pl.LightningModule):
     #         torchvision.utils.make_grid(model_output.recon_x),
     #         batch_idx,
     #     )
-        
+
     def validation_step(self, batch, batch_idx):
         x = self.batch_to_tensor(batch)
         model_output, loss = self.get_model_output(x, batch_idx)
@@ -165,3 +172,28 @@ class LitAutoEncoderTorch(pl.LightningModule):
     # def configure_optimizers(self):
     #     optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
     #     return optimizer
+
+    def test_step(self, batch, batch_idx):
+        x = self.batch_to_tensor(batch)
+        model_output = self.model(x)  # Forward pass with the test batch
+
+        # Optionally compute a loss or metric if relevant
+        loss = self.loss_function(model_output)
+
+        # Log test metrics
+        self.log("test_loss", loss)
+
+        # Optionally you can add more logging, for example, visualizations:
+        self.logger.experiment.add_image(
+            "test_input",
+            torchvision.utils.make_grid(x["data"]),
+            batch_idx,
+        )
+        self.logger.experiment.add_image(
+            "test_output",
+            torchvision.utils.make_grid(model_output.recon_x),
+            batch_idx,
+        )
+
+        # Return whatever data you need, for example, the loss
+        return loss
