@@ -151,7 +151,6 @@ class VQ_VAE(nn.Module):
         commitment_cost=0.25,
         decay=0.99,
         channels=1,
-        **kwargs
     ):
         super(VQ_VAE, self).__init__()
 
