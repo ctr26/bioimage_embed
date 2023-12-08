@@ -106,3 +106,20 @@ class DataModuleGlob(DataModule):
             **kwargs
         )
         # self.dataset = datasets.DatasetGlob(glob_str, **kwargs)
+
+
+def valid_indices(dataset):
+    valid_indices = []
+    # Iterate through the dataset and apply the transform to each image
+    for idx in range(len(dataset)):
+        try:
+            image, label = dataset[idx]
+            # If the transform works without errors, add the index to the list of valid indices
+            valid_indices.append(idx)
+        except Exception as e:
+            # A better way to do with would be with batch collation
+            print(f"Error occurred for image {idx}: {e}")
+
+    # Create a Subset using the valid indices
+    subset = torch.utils.data.Subset(dataset, valid_indices)
+    return subset
