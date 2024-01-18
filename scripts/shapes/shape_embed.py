@@ -51,9 +51,17 @@ import matplotlib as mpl
 from matplotlib import rc
 
 import logging
+import pickle 
+import base64
+import hashlib
 
 logger = logging.getLogger(__name__)
 
+def hashing_fn(args):
+    serialized_args = pickle.dumps(vars(args))
+    hash_object = hashlib.sha256(serialized_args)
+    hashed_string = base64.urlsafe_b64encode(hash_object.digest()).decode()
+    return hashed_string
 
 def scoring_df(X, y):
     # Split the data into training and test sets
@@ -157,7 +165,6 @@ def shape_embed_process():
 
     path = Path(metadata(""))
     path.mkdir(parents=True, exist_ok=True)
-    model_dir = f"models/{dataset_path}_{args.model}"
     # %%
 
     transform_crop = CropCentroidPipeline(window_size)
@@ -292,7 +299,7 @@ def shape_embed_process():
     dataloader.setup()
     model.eval()
 
-    model_dir = f"my_models/{dataset_path}_{model._get_name()}_{lit_model._get_name()}"
+    model_dir = f"checkpoints/{hashing_fn(args)}"
 
     tb_logger = pl_loggers.TensorBoardLogger(f"logs/")
     wandb = pl_loggers.WandbLogger(project="bioimage-embed", name="shapes")
