@@ -11,6 +11,7 @@ import torch.nn.functional as F
 
 
 class LitAutoEncoderTorch(pl.LightningModule):
+    loss_stack = []
     args = argparse.Namespace(
         opt="adamw",
         weight_decay=0.001,
@@ -192,3 +193,89 @@ class LitAutoEncoderTorch(pl.LightningModule):
             torchvision.utils.make_grid(model_output.recon_x),
             self.global_step,
         )
+
+
+class RGBLitAutoEncoderTorch(LitAutoEncoderTorch):
+    def __init__(self, model, args=SimpleNamespace()):
+        super().__init__(model, args)
+
+
+class GrayscaleLitAutoEncoderTorch(LitAutoEncoderTorch):
+    # Needs to be expanded to 3 for RGB models
+    repeat = (1, 3, 1, 1)
+
+    def __init__(self, model, args=SimpleNamespace()):
+        super().__init__(model, args)
+
+    def batch_to_tensor(self, batch):
+        return ModelOutput(data=batch["data"].repeat(*self.repeat))
+
+
+class ChannelAwareLitAutoEncoderTorch(GrayscaleLitAutoEncoderTorch):
+    # Assuming the tensor that came in was say 16,5,512,512
+    #  The grayscale tensor would be 16,15,512,512
+
+    def __init__(self, model, args=SimpleNamespace()):
+        super().__init__(model, args)
+        # Add any additional initializations here, if necessary
+
+    def expand_channels(self, tensor):
+        b, c, *dims = tensor.shape
+        tensor = tensor.unsqueeze(1)
+        tensor = tensor.permute(1, 2)
+        tensor = tensor.reshape(b * c, 1, *dims)
+        return tensor
+
+    def contract_channels(self, tensor):
+        b, c, dims = tensor.shape
+        tensor = tensor.reshape(b // c, c, *dims)
+        tensor = tensor.permute(1, 2)
+        tensor = tensor.squeeze(1)
+        return tensor
+
+    def batch_to_tensor(self, batch):
+        x = self.expand_channels(batch["data"])
+        # This should be the grayscale repeat
+        return super().batch_to_tensor(x).data
+
+    def _(self, x: torch.Tensor):
+        # Mean so that RGB model is gray again,
+        # Will be noisy in early epochs but should be fine
+        x = x.mean(dim=1, keepdim=True)
+        x = self.contract_channels(x)
+        return x
+
+    def loss_function(self, model_output, *args, **kwargs):
+        # Remember its sum square losses
+        # x = super().loss_function(model_output)
+        return model_output.loss + self.channel_loss(model_output.z)
+
+    def contrastive_loss(self, z_positive, z_negative):
+        pass
+
+    def channel_loss(self, x, reduction="mean"):
+        model_output = self.model(x)
+        z = model_output.z
+        return generalised_js_loss_z_loss(z)
+
+
+def generalised_js_loss_z_loss(z, reduction="batchmean"):
+    b, c, *dims = z.shape
+    z = z.unsqueeze(1)
+    transpose = z.permute(0, 2, 1, 3, 4)
+    return js(z, transpose, reduction=reduction)
+    return (q + p) / 2
+
+
+def js(p, q, reduction="batchmean"):
+    lr = F.kl_div(p, q, reduction=reduction)
+    rl = F.kl_div(q, p, reduction=reduction)
+    return (rl + lr) / 2
+
+
+def generalised_euclidean_distance_z_loss(z, reduction="mean"):
+    b, c, *dims = z.shape
+    z = z.unsqueeze(1)
+    loss = F.mse(z.permute(0, 2, 1, 3, 4), z, reduction=reduction)
+    # TODO clever mean across batches with a larger weighting from the now smaller batch
+    return loss
