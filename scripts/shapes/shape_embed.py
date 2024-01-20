@@ -609,10 +609,10 @@ if __name__ == "__main__":
         '-m', '--model', choices=models, default=models[0], metavar='MODEL'
       , help=f"The MODEL to use, one of {models} (default {models[0]}).")
     parser.add_argument(
-        '-b', '--batch-size', nargs=1, default=int(4), metavar='BATCH_SIZE', type=auto_pos_int
+        '-b', '--batch-size', default=int(4), metavar='BATCH_SIZE', type=auto_pos_int
       , help="The BATCH_SIZE for the run, a positive integer (default 4)")
     parser.add_argument(
-        '-l', '--latent-space-size', nargs=1, default=int(128), metavar='LATENT_SPACE_SIZE', type=auto_pos_int
+        '-l', '--latent-space-size', default=int(128), metavar='LATENT_SPACE_SIZE', type=auto_pos_int
       , help="The LATENT_SPACE_SIZE, a positive integer (default 128)")
     #parser.add_argument('-v', '--verbose', action='count', default=0,
     #  help="Increase verbosity level by adding more \"v\".")
