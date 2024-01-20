@@ -208,7 +208,7 @@ def shape_embed_process():
     dataset_path = args.dataset
 
     # train_data_path = f"scripts/shapes/data/{dataset_path}"
-    train_data_path = f"data/{dataset_path}"
+    train_data_path = f"/nfs/research/uhlmann/afoix/{dataset_path}"
     metadata = lambda x: f"results/{dataset_path}_{args.model}/{x}"
 
     path = Path(metadata(""))
