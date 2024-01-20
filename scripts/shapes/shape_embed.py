@@ -393,7 +393,7 @@ def shape_embed_process(clargs):
     lit_model.eval()
 
     validation = trainer.validate(lit_model, datamodule=dataloader)
-    # testing = trainer.test(lit_model, datamodule=dataloader)
+    testing = trainer.test(lit_model, datamodule=dataloader)
     example_input = Variable(torch.rand(1, *args.input_dim))
 
     # torch.jit.save(lit_model.to_torchscript(), f"{model_dir}/model.pt")
