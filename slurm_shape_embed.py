@@ -55,6 +55,14 @@ echo "  - latent space size {ls_size}"
 python3 scripts/shapes/shape_embed.py --model {model} --batch-size {b_size} --latent-space-size {ls_size}
 """
 
+def mem_size(ls):
+    if ls <= 128:
+        return '50GB'
+    if ls <= 256:
+        return '100GB'
+    if ls <= 512:
+        return '300GB'
+
 if __name__ == "__main__":
     
     slurmdir = f'{os.getcwd()}/slurmdir'
@@ -71,9 +79,10 @@ if __name__ == "__main__":
         print(f'cat {fp.name}')
         result = subprocess.run(['cat', fp.name], stdout=subprocess.PIPE)
         print(result.stdout.decode('utf-8'))
+        print(mem_size(ls))
         result = subprocess.run([ 'sbatch'
                                 , '--time', '10:00:00'
-                                , '--mem', '50GB'
+                                , '--mem', mem_size(ls)
                                 , '--job-name', jobname
                                 , '--output', f'{slurmdir}/{jobname}.out'
                                 , '--error', f'{slurmdir}/{jobname}.err'
