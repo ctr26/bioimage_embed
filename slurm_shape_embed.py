@@ -65,11 +65,11 @@ def mem_size(ls):
 
 def n_gpus(ls):
     if ls <= 128:
-        return 'gpus:2'
+        return 'gpu:2'
     if ls > 128:
-        return 'gpus:2'
+        return 'gpu:2'
     if ls > 256:
-        return 'gpus:3'
+        return 'gpu:3'
 
 if __name__ == "__main__":
     
