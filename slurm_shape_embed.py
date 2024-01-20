@@ -58,10 +58,18 @@ python3 scripts/shapes/shape_embed.py --model {model} --batch-size {b_size} --la
 def mem_size(ls):
     if ls <= 128:
         return '50GB'
-    if ls <= 256:
+    if ls > 128:
         return '100GB'
-    if ls <= 512:
+    if ls > 256:
         return '300GB'
+
+def n_gpus(ls):
+    if ls <= 128:
+        return 'gpus:2'
+    if ls > 128:
+        return 'gpus:2'
+    if ls > 256:
+        return 'gpus:3'
 
 if __name__ == "__main__":
     
@@ -86,6 +94,6 @@ if __name__ == "__main__":
                                 , '--job-name', jobname
                                 , '--output', f'{slurmdir}/{jobname}.out'
                                 , '--error', f'{slurmdir}/{jobname}.err'
-                                , '--gres', 'gpu:2'
+                                , '--gres', n_gpus(ls)
                                 , fp.name], stdout=subprocess.PIPE)
         print(result.stdout.decode('utf-8'))
