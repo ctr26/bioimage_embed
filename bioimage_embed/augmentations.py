@@ -42,6 +42,7 @@ DEFAULT_AUGMENTATION_LIST = [
 ]
 
 DEFAULT_AUGMENTATION = A.Compose(DEFAULT_AUGMENTATION_LIST)
+DEFAULT_AUGMENTATION_DICT = DEFAULT_AUGMENTATION.to_dict()
 
 class TransformsWrapper:
     def __init__(self, transforms_cfg: DictConfig) -> None:

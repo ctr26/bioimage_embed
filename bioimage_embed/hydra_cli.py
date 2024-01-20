@@ -8,12 +8,22 @@ from hydra.core.config_store import ConfigStore
 from omegaconf import OmegaConf
 import albumentations
 from dataclasses import dataclass, field
-from bioimage_embed.augmentations import DEFAULT_AUGMENTATION_LIST
+from bioimage_embed.augmentations import (
+    DEFAULT_AUGMENTATION_LIST,
+    DEFAULT_AUGMENTATION,
+    DEFAULT_AUGMENTATION_DICT,
+)
 import albumentations as A
 import os
+from typing import Optional
+from omegaconf import DictConfig, OmegaConf
+from pathlib import Path
+
+# A.compose(DEFAULT_AUGMENTATION_LIST).to_dict()
+
 
 @dataclass
-class Receipe:
+class Recipe:
     _target_: str = "types.SimpleNamespace"
     opt: str = "adamw"
     weight_decay: float = 0.001
@@ -24,17 +34,17 @@ class Receipe:
     min_lr: float = 1e-6
     t_initial: int = 10
     t_mul: int = 2
-    lr_min: float = None
+    lr_min: Optional[float] = None
     decay_rate: float = 0.1
     warmup_lr: float = 1e-6
     warmup_lr_init: float = 1e-6
     warmup_epochs: int = 5
-    cycle_limit: int = None
+    cycle_limit: Optional[int] = None
     t_in_epochs: bool = False
     noisy: bool = False
     noise_std: float = 0.1
     noise_pct: float = 0.67
-    noise_seed: int = None
+    noise_seed: Optional[int] = None
     cooldown_epochs: int = 5
     warmup_t: int = 0
 
@@ -42,7 +52,7 @@ class Receipe:
 @dataclass
 class Transform:
     _target_: str = "albumentations.Compose"
-    transforms: A.Compose = field(default_factory=A.Compose(DEFAULT_AUGMENTATION_LIST))
+    transforms: dict = field(default_factory=lambda: DEFAULT_AUGMENTATION_DICT)
 
 
 # @dataclass
@@ -69,38 +79,40 @@ class DataLoader:
     dataset: str = field(default_factory=ImageDataset)
 
 
-# def cs_generator():
+@dataclass
+class Config:
+    recipe: Recipe = field(default_factory=Recipe)
+    transform: Transform = field(default_factory=Transform)
+    # dataloader: DataLoader = field(default_factory=DataLoader)
+
+
 cs = ConfigStore.instance()
-cs.store(name="receipe", node=Receipe)
-cs.store(name="dataloader", node=DataLoader)
+cs.store(name="config", node=Config)
 
 
-# return cs
 def train():
     main(job_name="test_app")
 
 
-def write_default_config_file(config_path, config_filename, config):
-    os.makedirs(config_path, exist_ok=True)
-    with open(os.path.join(config_path, config_filename), "w") as file:
-        file.write(OmegaConf.to_yaml(config))
+def write_default_config_file(config_path):
+    cfg = get_default_config()
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(config_path, "w") as file:
+        file.write(OmegaConf.to_yaml(cfg))
 
 
-def main(config_path="conf", job_name="test_app"):
-    config_file = os.path.join(config_path, "config.yaml")
+# @hydra.main(config_path="conf", config_name="config")
+# def main(cfg: DictConfig):
+#     print(cfg)
 
-    # Check if the configuration directory exists, if not, create it
-    if not os.path.exists(config_path):
-        os.makedirs(config_path)
-        # Initialize Hydra with a basic configuration
-        hydra.initialize(version_base=None, config_path=config_path, job_name=job_name)
-        cfg = hydra.compose(config_name="config")
-        # Save the default configuration
-        with open(config_file, "w") as file:
-            file.write(OmegaConf.to_yaml(cfg))
-    else:
-        # Initialize Hydra normally if the configuration directory exists
-        hydra.initialize(version_base=None, config_path=config_path, job_name=job_name)
-        cfg = hydra.compose(config_name="config")
 
-    print(OmegaConf.to_yaml(cfg))
+def main(config_dir="conf", config_file="config.yaml", job_name="test_app"):
+    hydra.initialize(version_base=None, config_path=config_dir, job_name=job_name)
+    cfg = hydra.compose(config_name=config_file)
+    return cfg
+
+
+def get_default_config(config_name="config"):
+    with initialize(config_path=None, version_base=None):
+        cfg = compose(config_name=config_name)
+    return cfg
