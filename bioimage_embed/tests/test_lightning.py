@@ -2,24 +2,33 @@ from bioimage_embed.models import create_model
 import pytest
 import torch
 
-from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 import pythae
 
 
-from bioimage_embed.utils import collate_none
-
 from bioimage_embed.models import MODELS
 
-from bioimage_embed.lightning import LitAutoEncoderTorch
-from bioimage_embed.models.legacy import vae
+from bioimage_embed.lightning import LitAutoEncoderTorch, RGBLitAutoEncoderTorch, GrayscaleLitAutoEncoderTorch, ChannelAwareLitAutoEncoderTorch
+    
 import numpy as np
 from bioimage_embed.models import create_model, MODELS
 
 from bioimage_embed.models import MODELS
 from bioimage_embed import LitAutoEncoderTorch
 from bioimage_embed.lightning import DataModule
+from bioimage_embed.lightning.torch import _model_classes
 
+# LitAutoEncoderTorch:3
+# RGBLitAutoEncoderTorch:3
+# GrayscaleLitAutoEncoderTorch:1
+# ChannelAwareLitAutoEncoderTorch:1,3,5
+
+model_channel_map = {
+    LitAutoEncoderTorch: [3],
+    RGBLitAutoEncoderTorch: [3],
+    GrayscaleLitAutoEncoderTorch: [1],
+    ChannelAwareLitAutoEncoderTorch: [1, 3, 5],
+}
 
 @pytest.fixture(params=MODELS)
 def model_name(request):
@@ -77,11 +86,32 @@ def input_dim(image_dim, channel_dim):
 def data(input_dim):
     return torch.rand(1, *input_dim)
 
+@pytest.fixture(params=_model_classes)
+def model_class(request):
+    return request.param
 
 @pytest.fixture()
-def lit_model(model):
+def lit_model(model,model_class):
+    return model_class(model)
     return LitAutoEncoderTorch(model)
 
+# @pytest.fixture()
+# def lit_model(model):
+#     return LitAutoEncoderTorch(model)
+
+@pytest.fixture()
+def model_and_batch(model_name, batch_size):
+    # Define combinations to ignore
+    ignored_combinations = [
+        ('ModelA', 1),
+        ('ModelB', 2),
+        # Add more combinations as needed
+    ]
+
+    if (model_name, batch_size) in ignored_combinations:
+        pytest.skip(f"Ignoring combination of {model_name} and batch size {batch_size}")
+
+    return model_name, batch_size
 
 def test_export_onxx(data, lit_model):
     return lit_model.to_onnx("model.onnx", data)

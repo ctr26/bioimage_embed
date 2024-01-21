@@ -9,7 +9,6 @@ import timm
 from pythae.models.base.base_utils import ModelOutput
 import torch.nn.functional as F
 
-
 class LitAutoEncoderTorch(pl.LightningModule):
     loss_stack = []
     args = argparse.Namespace(
@@ -35,6 +34,7 @@ class LitAutoEncoderTorch(pl.LightningModule):
         noise_seed=None,
         cooldown_epochs=5,
         warmup_t=0,
+        channel_aware=False,
     )
 
     def __init__(self, model, args=SimpleNamespace()):
@@ -208,7 +208,7 @@ class GrayscaleLitAutoEncoderTorch(LitAutoEncoderTorch):
         super().__init__(model, args)
 
     def batch_to_tensor(self, batch):
-        return ModelOutput(data=batch["data"].repeat(*self.repeat))
+        return ModelOutput(data=batch.repeat(*self.repeat))
 
 
 class ChannelAwareLitAutoEncoderTorch(GrayscaleLitAutoEncoderTorch):
@@ -253,29 +253,121 @@ class ChannelAwareLitAutoEncoderTorch(GrayscaleLitAutoEncoderTorch):
     def contrastive_loss(self, z_positive, z_negative):
         pass
 
-    def channel_loss(self, x, reduction="mean"):
+    def channel_loss(self, x):
         model_output = self.model(x)
         z = model_output.z
-        return generalised_js_loss_z_loss(z)
+        z = self.expand_channels(z)
+        channel_loss = euclidean_z_channel(z)
+        # return euclidean_z_channel(z).sum()
+        # TODO clever mean across batches with a larger weighting from the now smaller batch
+        return channel_loss.sum(dim=(1, 2)).mean(dim=0)
 
 
-def generalised_js_loss_z_loss(z, reduction="batchmean"):
-    b, c, *dims = z.shape
-    z = z.unsqueeze(1)
-    transpose = z.permute(0, 2, 1, 3, 4)
-    return js(z, transpose, reduction=reduction)
-    return (q + p) / 2
+def js_loss_z_channel_loss(x, reduction="batchmean"):
+    """Calculates the generalised js loss between a tensor and its transpose on the channel dimension
+
+    Args:
+        x (_type_): x.shape = (b, c, z)
+        reduction (str, optional): _description_. Defaults to "batchmean".
+
+    Returns:
+        _type_: _description_
+    """
+    b, c, z = x.shape
+    x = x.unsqueeze(1)
+    transpose = x.permute(0, 2, 1, 3)
+    return js(x, transpose, reduction=reduction)
 
 
-def js(p, q, reduction="batchmean"):
-    lr = F.kl_div(p, q, reduction=reduction)
-    rl = F.kl_div(q, p, reduction=reduction)
+def js(p: torch.Tensor, q: torch.Tensor, reduction="batchmean", log_target=True):
+    """Calculates the js divergence between two tensors
+
+    Args:
+        p (torch.Tensor): p.shape = (b, c, z)
+        q (torch.Tensor): q.shape = (b, c, z)
+        reduction (str, optional): _description_. Defaults to "batchmean".
+        log_target (bool, optional): _description_. Defaults to True.
+
+    Returns:
+        torch.Tensor: js divergence
+    """
+    # TODO checkout the log_target
+    lr = F.kl_div(p, q, reduction=reduction, log_target=log_target)
+    rl = F.kl_div(q, p, reduction=reduction, log_target=log_target)
     return (rl + lr) / 2
 
 
-def generalised_euclidean_distance_z_loss(z, reduction="mean"):
-    b, c, *dims = z.shape
-    z = z.unsqueeze(1)
-    loss = F.mse(z.permute(0, 2, 1, 3, 4), z, reduction=reduction)
-    # TODO clever mean across batches with a larger weighting from the now smaller batch
-    return loss
+def euclidean_z_channel(x):
+    return distance_z_channel(x, p=2.0)
+
+
+def distance_z_channel(x, p=2.0):
+    """Calculates the distance loss between a tensor and its transpose on the channel dimension
+
+    Args:
+        x (torch.Tensor):  x.shape = (b, c, z)
+        p (float, optional): _description_. Defaults to 2.0 euclidean.
+        reduction (str, optional): _description_. Defaults to "mean".
+
+    Returns:
+        torch.Tensor: distance
+    """
+    b, c, z = x.shape
+    x = x.unsqueeze(1)
+    # loss = F.mse_loss(x.permute(0, 2, 1, 3), x,s reduction="none")
+    dist = torch.cdist(x, x.permute(0, 2, 1, 3))
+    return dist
+
+
+def euclidean_z_channel_loss(x, reduction="mean"):
+    return distance_z_channel(x,p=2.0).mean()
+
+
+def js_z_channel_loss(x, reduction="mean"):
+    return js_loss_z_channel_loss(x, reduction=reduction)
+
+
+_channel_aware_losses = [
+    euclidean_z_channel_loss,
+    js_z_channel_loss,
+]
+
+_model_classes = [
+    LitAutoEncoderTorch,
+    RGBLitAutoEncoderTorch,
+    GrayscaleLitAutoEncoderTorch,
+    ChannelAwareLitAutoEncoderTorch,
+]
+
+
+_rgb_model_classes = [
+    RGBLitAutoEncoderTorch,
+]
+
+def autoencoder_factory(model,args=SimpleNamespace()):
+    if args.channel_aware == True:
+        return ChannelAwareLitAutoEncoderTorch(model, args)
+    if args.input_dim[0] == 1 & args.channel_aware == False:
+        return GrayscaleLitAutoEncoderTorch(model, args)
+    if args.input_dim[0] == 3 & args.channel_aware == False:
+        return RGBLitAutoEncoderTorch(model, args)
+    return LitAutoEncoderTorch(model, args)
+
+
+# class LitAutoEncoder(torch.nn.Module):
+#     def __init__(self, model, args=SimpleNamespace()):
+#         args.input_dim = args.input_dim
+#         if args.channel_aware == True:
+#            super(ChannelAwareLitAutoEncoderTorch, self).__init__(model, args) 
+#         if args.input_dim[0] == 1 & args.channel_aware == False:
+#             self.model = GrayscaleLitAutoEncoderTorch(model, args)
+#         if args.input_dim[0] == 3 & args.channel_aware == False:
+#             self.model = RGBLitAutoEncoderTorch(model, args)
+            
+            
+#         if args.input_dim[0] == 3:
+#             self.model = RGBLitAutoEncoderTorch(model, args)
+#         if args.input_dim[0] == 5:
+#             super(ChannelAwareLitAutoEncoderTorch, self).__init__(model, args)
+        
+    
