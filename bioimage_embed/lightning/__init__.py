@@ -1,3 +1,4 @@
 from .pyro import LitAutoEncoderPyro
-from .torch import LitAutoEncoderTorch
+from .torch import LitAutoEncoderTorch,RGBLitAutoEncoderTorch, GrayscaleLitAutoEncoderTorch,ChannelAwareLitAutoEncoderTorch
+
 from .dataloader import DataModuleGlob,DataModule
