@@ -52,7 +52,11 @@ echo "running shape embed with:"
 echo "  - model {model}"
 echo "  - batch size {b_size}"
 echo "  - latent space size {ls_size}"
-python3 scripts/shapes/shape_embed.py --model {model} --batch-size {b_size} --latent-space-size {ls_size}
+rand_name=$(cat /dev/urandom | tr -cd 'a-f0-9' | head -c 16)
+mkdir -p slurm_rundir/$rand_name
+cp -r $(ls | grep -v slurm_rundir) slurm_rundir/$rand_name/.
+cd slurm_rundir/$rand_name
+python3 scripts/shapes/shape_embed.py --model {model} --batch-size {b_size} --latent-space-size {ls_size} --clear-checkpoints
 """
 
 def mem_size(ls):
