@@ -363,21 +363,3 @@ def autoencoder_factory(model,args=SimpleNamespace()):
         return RGBLitAutoEncoderTorch(model, args)
     return LitAutoEncoderTorch(model, args)
 
-
-# class LitAutoEncoder(torch.nn.Module):
-#     def __init__(self, model, args=SimpleNamespace()):
-#         args.input_dim = args.input_dim
-#         if args.channel_aware == True:
-#            super(ChannelAwareLitAutoEncoderTorch, self).__init__(model, args) 
-#         if args.input_dim[0] == 1 & args.channel_aware == False:
-#             self.model = GrayscaleLitAutoEncoderTorch(model, args)
-#         if args.input_dim[0] == 3 & args.channel_aware == False:
-#             self.model = RGBLitAutoEncoderTorch(model, args)
-            
-            
-#         if args.input_dim[0] == 3:
-#             self.model = RGBLitAutoEncoderTorch(model, args)
-#         if args.input_dim[0] == 5:
-#             super(ChannelAwareLitAutoEncoderTorch, self).__init__(model, args)
-        
-    
