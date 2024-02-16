@@ -1,11 +1,8 @@
 from bioimage_embed.models import create_model
 import pytest
 import torch
-
 import pytorch_lightning as pl
-
 from bioimage_embed.models import create_model, MODELS
-
 from bioimage_embed.models import MODELS
 from bioimage_embed.lightning import DataModule
 from bioimage_embed.lightning.torch import _3c_model_classes
@@ -124,15 +121,19 @@ def trainer():
         max_epochs=1,
     )
 
-
 @pytest.mark.skip(reason="Expensive to run")
 def test_trainer_fit(trainer, lit_model, dataloader):
-    trainer.fit(lit_model, dataloader)
+    return trainer.fit(lit_model, dataloader)
 
+@pytest.fixture()
+def tensor(dataset):
+    return dataset.unsqueeze(0)
+    
+def test_dataset(lit_model, dataset):
+    return lit_model(dataset)
 
 def test_dataset_trainer(trainer, lit_model, dataset):
-    trainer.test(lit_model, dataset.unsqueeze(0))
-
+    return trainer.test(lit_model, dataset)
 
 def test_dataloader_trainer(trainer, lit_model, dataloader):
-    trainer.test(lit_model, dataloader)
+    return trainer.test(lit_model, dataloader)
