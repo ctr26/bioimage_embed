@@ -365,7 +365,7 @@ def shape_embed_process(clargs):
     wandb.watch(lit_model, log="all")
 
     trainer = pl.Trainer(
-        logger=[wandb, tb_logger],
+        logger=[wandblogger, tb_logger],
         gradient_clip_val=0.5,
         enable_checkpointing=True,
         devices=1,
