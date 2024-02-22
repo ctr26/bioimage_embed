@@ -39,8 +39,8 @@ latent_space_sizes = [512]
 datasets = [
   ("vampire", "vampire/torchvision/Control/")
 , ("bbbc010", "bbbc010/BBBC010_v1_foreground_eachworm/")
-, ("synthcell", "synthcellshapes_dataset")
-#, ("helakyoto", "")
+, ("synthcell", "synthcellshapes_dataset/")
+, ("helakyoto", "H2b_10x_MD_exp665/samples/")
 ]
 
 wandb_project='shape-embed-ite-dataset'
