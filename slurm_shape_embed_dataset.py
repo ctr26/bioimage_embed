@@ -41,6 +41,7 @@ datasets = [
 , ("bbbc010", "bbbc010/BBBC010_v1_foreground_eachworm/")
 , ("synthcell", "synthcellshapes_dataset/")
 , ("helakyoto", "H2b_10x_MD_exp665/samples/")
+, ("allen", "allen_dataset/")
 ]
 
 wandb_project='shape-embed-ite-dataset'
