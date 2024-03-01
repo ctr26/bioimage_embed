@@ -95,7 +95,7 @@ if __name__ == "__main__":
         print(result.stdout.decode('utf-8'))
         print(mem_size(ls))
         result = subprocess.run([ 'sbatch'
-                                , '--time', '10:00:00'
+                                , '--time', '24:00:00'
                                 , '--mem', mem_size(ls)
                                 , '--job-name', jobname
                                 , '--output', f'{slurmdir}/{jobname}.out'
