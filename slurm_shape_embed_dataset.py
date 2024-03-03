@@ -37,6 +37,7 @@ batch_sizes = [4]
 latent_space_sizes = [128]
 
 datasets = [
+#  ("tiny_synthcell", "tiny_synthcellshapes_dataset/")
   ("vampire", "vampire/torchvision/Control/")
 , ("bbbc010", "bbbc010/BBBC010_v1_foreground_eachworm/")
 , ("synthcell", "synthcellshapes_dataset/")
