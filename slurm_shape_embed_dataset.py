@@ -34,7 +34,7 @@ models = [
 , "resnet18_vae_legacy"
 ]
 batch_sizes = [4]
-latent_space_sizes = [512]
+latent_space_sizes = [128]
 
 datasets = [
   ("vampire", "vampire/torchvision/Control/")
@@ -44,7 +44,7 @@ datasets = [
 , ("allen", "allen_dataset/")
 ]
 
-wandb_project='shape-embed-ite-dataset'
+wandb_project='shape-embed-test-changes'
 
 slurm_script="""#!/bin/bash
 

@@ -185,7 +185,8 @@ def shape_embed_process(clargs):
         "frobenius_norm": False,
         # dataset = "bbbc010/BBBC010_v1_foreground_eachworm"
         # dataset = "vampire/mefs/data/processed/Control"
-        "dataset": "synthcellshapes_dataset",
+        #"dataset": "synthcellshapes_dataset",
+        "dataset": clargs.dataset[0],
     }
 
     optimizer_params = {
