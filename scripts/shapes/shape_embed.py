@@ -323,6 +323,7 @@ def shape_embed_process(clargs):
     plt.close()
 
     # Create a Subset using the valid indices
+    dataset = torch.utils.data.Subset(dataset, valid_indices)
     dataloader = DataModule(
         dataset,
         batch_size=args.batch_size,
