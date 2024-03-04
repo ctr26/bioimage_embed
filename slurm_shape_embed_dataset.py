@@ -28,13 +28,17 @@ import tempfile
 #sbatch "$job_script"
 
 models = [
-  "resnet18_vae"
+  "resnet50_vae"
+, "resnet50_vqvae"
+, "resnet50_vqvae_legacy"
+, "resnet50_vae_legacy"
+, "resnet18_vae"
 , "resnet18_vqvae"
 , "resnet18_vqvae_legacy"
-, "resnet18_vae_legacy"
-]
+, "resnet18_vae_legacy"]
+
 batch_sizes = [4]
-latent_space_sizes = [128]
+latent_space_sizes = [512]
 
 datasets = [
 #  ("tiny_synthcell", "tiny_synthcellshapes_dataset/")
@@ -45,7 +49,7 @@ datasets = [
 , ("allen", "allen_dataset/")
 ]
 
-wandb_project='shape-embed-test-changes'
+wandb_project='shape-embed-biggest'
 
 slurm_script="""#!/bin/bash
 
@@ -101,6 +105,7 @@ if __name__ == "__main__":
                                 , '--job-name', jobname
                                 , '--output', f'{slurmdir}/{jobname}.out'
                                 , '--error', f'{slurmdir}/{jobname}.err'
-                                , '--gres', n_gpus(ls)
+                                #, '--gres', n_gpus(ls)
+                                , '--gpus=a100:1'
                                 , fp.name], stdout=subprocess.PIPE)
         print(result.stdout.decode('utf-8'))
