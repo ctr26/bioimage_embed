@@ -1,25 +1,16 @@
 from bioimage_embed.models import create_model
 import pytest
 import torch
-
-from torch.utils.data import DataLoader
 import pytorch_lightning as pl
-import pythae
-
-
-from bioimage_embed.utils import collate_none
-
-from bioimage_embed.models import MODELS
-
-from bioimage_embed.lightning import LitAutoEncoderTorch
-from bioimage_embed.models.legacy import vae
-import numpy as np
 from bioimage_embed.models import create_model, MODELS
-
 from bioimage_embed.models import MODELS
-from bioimage_embed import LitAutoEncoderTorch
 from bioimage_embed.lightning import DataModule
+from bioimage_embed.lightning.torch import _3c_model_classes
 
+
+@pytest.fixture(params=_3c_model_classes)
+def model_class(request):
+    return request.param
 
 @pytest.fixture(params=MODELS)
 def model_name(request):
@@ -78,14 +69,14 @@ def data(input_dim):
     return torch.rand(1, *input_dim)
 
 
-@pytest.fixture()
-def lit_model(model):
-    return LitAutoEncoderTorch(model)
 
+@pytest.fixture()
+def lit_model(model, model_class):
+    return model_class(model)
+    return LitAutoEncoderTorch(model)
 
 def test_export_onxx(data, lit_model):
     return lit_model.to_onnx("model.onnx", data)
-
 
 @pytest.fixture()
 def model_torchscript(lit_model):
@@ -122,6 +113,7 @@ def dataloader(dataset, batch_size):
         pin_memory=False,
     )
 
+
 @pytest.fixture()
 def trainer():
     return pl.Trainer(
@@ -131,10 +123,17 @@ def trainer():
 
 @pytest.mark.skip(reason="Expensive to run")
 def test_trainer_fit(trainer, lit_model, dataloader):
-    trainer.fit(lit_model, dataloader)
+    return trainer.fit(lit_model, dataloader)
+
+@pytest.fixture()
+def tensor(dataset):
+    return dataset.unsqueeze(0)
+    
+def test_dataset(lit_model, dataset):
+    return lit_model(dataset)
 
 def test_dataset_trainer(trainer, lit_model, dataset):
-    trainer.test(lit_model, dataset.unsqueeze(0))
+    return trainer.test(lit_model, dataset)
 
 def test_dataloader_trainer(trainer, lit_model, dataloader):
-    trainer.test(lit_model, dataloader)
+    return trainer.test(lit_model, dataloader)

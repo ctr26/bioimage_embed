@@ -13,8 +13,7 @@ from types import SimpleNamespace
 
 def frobenius_norm_2D_torch(tensor: torch.Tensor) -> torch.Tensor:
     return torch.norm(tensor, p="fro", dim=(-2, -1), keepdim=True)
-
-
+ 
 class MaskEmbed(LitAutoEncoderTorch):
     def __init__(self, model, args=SimpleNamespace()):
         super().__init__(model, args)
