@@ -4,7 +4,7 @@ import pyefd
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import cross_validate, KFold, train_test_split
+from sklearn.model_selection import cross_validate, KFold, train_test_split, StratifiedKFold
 from sklearn.metrics import make_scorer
 import pandas as pd
 from sklearn import metrics
@@ -44,6 +44,7 @@ from bioimage_embed.shapes.transforms import (
     MaskToDistogramPipeline,
     RotateIndexingClockwise,
     CoordsToDistogram,
+    AsymmetricDistogramToCoordsPipeline,
 )
 import matplotlib.pyplot as plt
 
@@ -113,10 +114,11 @@ def scoring_df(X, y):
     )
     # Define a dictionary of metrics
     scoring = {
-        "accuracy": make_scorer(metrics.accuracy_score),
+        "accuracy": make_scorer(metrics.balanced_accuracy_score),
         "precision": make_scorer(metrics.precision_score, average="macro"),
         "recall": make_scorer(metrics.recall_score, average="macro"),
         "f1": make_scorer(metrics.f1_score, average="macro"),
+        "roc_auc": make_scorer(metrics.roc_auc_score, average="macro"),
     }
 
     # Create a random forest classifier
@@ -136,7 +138,7 @@ def scoring_df(X, y):
         estimator=pipeline,
         X=X,
         y=y,
-        cv=KFold(n_splits=k_folds),
+        cv=StratifiedKFold(n_splits=k_folds),
         scoring=scoring,
         n_jobs=-1,
         return_train_score=False,
@@ -399,6 +401,23 @@ def shape_embed_process():
 
     predictions = trainer.predict(lit_model, datamodule=dataloader)
 
+
+    test_dist_pred = predictions[0].out.recon_x
+    plt.imsave(metadata(f"test_dist_pred.png"), test_dist_pred.mean(axis=(0,1)))
+    plt.close()
+
+    test_dist_in = predictions[0].x.data
+    plt.imsave(metadata(f"test_dist_in.png"), test_dist_in.mean(axis=(0,1)))
+    plt.close()
+
+    test_pred_coords = AsymmetricDistogramToCoordsPipeline(window_size=window_size)(
+        np.array(test_dist_pred[:, 0, :, :].unsqueeze(dim=0))
+    )
+
+    plt.scatter(*test_pred_coords[0,0].T)
+    # Save the plot as an image without border and coordinate axes
+    plt.savefig(metadata(f"test_pred_coords.png"), bbox_inches="tight", pad_inches=0)
+    plt.close()
     # Use the namespace variables
     latent_space = torch.stack([d.out.z.flatten() for d in predictions])
     scalings = torch.stack([d.x.scalings.flatten() for d in predictions])
