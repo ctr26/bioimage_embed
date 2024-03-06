@@ -226,12 +226,12 @@ class ChannelAwareLitAutoEncoderTorch(GrayscaleLitAutoEncoderTorch):
         tensor = tensor.reshape(b * c, 1, *dims)
         return tensor
 
-    def contract_channels(self, tensor):
-        b, c, dims = tensor.shape
-        tensor = tensor.reshape(b // c, c, *dims)
-        tensor = tensor.transpose(1, 2)
-        tensor = tensor.squeeze(1)
-        return tensor
+    def contract_channels(self, x,c):
+        b_c, dims = x.shape
+        x = x.reshape(b_c // c, c, *dims)
+        x = x.transpose(1, 2)
+        x = x.squeeze(1)
+        return x
 
     def batch_to_tensor(self, batch: torch.Tensor) -> ModelOutput:
         x = self.expand_channels(batch)
@@ -258,10 +258,10 @@ class ChannelAwareLitAutoEncoderTorch(GrayscaleLitAutoEncoderTorch):
 
     def channel_loss(self, x):
         model_output = self.model(x)
-        z = model_output.z
-        z = self.expand_channels(z)
+        b,c,dims = x.shape
+        z = model_output.z.mean(dim=1, keepdim=True)
+        z = self.contract_channels(z,c)
         channel_loss = euclidean_z_channel(z)
-        # return euclidean_z_channel(z).sum()
         # TODO clever mean across batches with a larger weighting from the now smaller batch
         return channel_loss.sum(dim=(1, 2)).mean(dim=0)
 
