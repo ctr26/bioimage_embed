@@ -182,7 +182,7 @@ def shape_embed_process(clargs):
         "pretrained": True,
         "commitment_cost": 0.25,
         "decay": 0.99,
-        "frobenius_norm": True,
+        "frobenius_norm": False,
         # dataset = "bbbc010/BBBC010_v1_foreground_eachworm"
         # dataset = "vampire/mefs/data/processed/Control"
         #"dataset": "synthcellshapes_dataset",

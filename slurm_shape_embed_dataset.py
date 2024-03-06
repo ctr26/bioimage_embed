@@ -49,7 +49,7 @@ datasets = [
 , ("allen", "allen_dataset/")
 ]
 
-wandb_project='shape-embed-biggest'
+wandb_project='shape-embed-no-norm'
 
 slurm_script="""#!/bin/bash
 
