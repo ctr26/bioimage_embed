@@ -66,10 +66,15 @@ class Transform:
 @dataclass
 class ImageDataset:
     _target_: str = "torchvision.datasets.ImageFolder"
+    root: str = "data"
     transform: Transform = field(default_factory=Transform)
     
-    def validate(self):
-        pass
+    @validator("path")
+    def validate_path(cls, root: str) -> Path:
+        if Path(root).exists():
+            print("exist")
+        return Path(root)
+    # TODO check if files exist
 
 @dataclass
 class Dataset:
