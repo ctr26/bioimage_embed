@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from hydra import compose, initialize
 from omegaconf import OmegaConf
 from types import SimpleNamespace
-import hydra
 from hydra.core.config_store import ConfigStore
 from omegaconf import OmegaConf
 import albumentations
@@ -18,10 +17,17 @@ import os
 from typing import Optional
 from omegaconf import DictConfig, OmegaConf
 from pathlib import Path
-import torch
-
 from pydantic import BaseModel, conint, validator
 from pydantic.dataclasses import dataclass
+from bioimage_embed.lightning import DataModule
+from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
+from .lightning.torch import LitAutoEncoderTorch
+from pytorch_lightning.callbacks import EarlyStopping, Callback
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
+
+
 
 @dataclass
 class Recipe:
@@ -48,61 +54,139 @@ class Recipe:
     noise_seed: Optional[int] = None
     cooldown_epochs: int = 5
     warmup_t: int = 0
+    data: str = "data"
 
 
 @dataclass
 class Transform:
     _target_: str = "albumentations.Compose"
     transforms: dict = field(default_factory=lambda: DEFAULT_AUGMENTATION_DICT)
+    # transforms = Dict[str, Any] = Field(default_factory=lambda: DEFAULT_AUGMENTATION_DICT)
 
 
-# @dataclass
-# class AlbumentationsTransform:
-#     _target_: str = "albumentations.from_dict"
-#     transform_dict: dict = field(default_factory=A.from_dict)
-#     transform = A.from_dict(OmegaConf.to_container(cfg.albumentations, resolve=True))
+# # @dataclass
+# # class AlbumentationsTransform:
+# #     _target_: str = "albumentations.from_dict"
+# #     transform_dict: dict = field(default_factory=A.from_dict)
+# #     transform = A.from_dict(OmegaConf.to_container(cfg.albumentations, resolve=True))
 
 
 @dataclass
-class ImageDataset:
+class Dataset:
+    _target_: str = "torch.utils.data.Dataset"
+    # transform: Transform = Field(default_factory=Transform)
+    # root: str = ""
+    # @validator("path")
+    # def validate_path(cls, root: str) -> Path:
+    #     if Path(root).exists():
+    #         print("exist")
+    #     return Path(root)
+
+@dataclass
+class ImageFolderDataset(Dataset):
     _target_: str = "torchvision.datasets.ImageFolder"
+    transform: Transform = Field(default_factory=Transform)
     root: str = "data"
-    transform: Transform = field(default_factory=Transform)
-    
     @validator("path")
     def validate_path(cls, root: str) -> Path:
         if Path(root).exists():
             print("exist")
         return Path(root)
-    # TODO check if files exist
 
-@dataclass
-class Dataset:
-    pass
+
 
 
 @dataclass
 class DataLoader:
     _target_: str = "bioimage_embed.lightning.dataloader.DataModule"
-    dataset: str = field(default_factory=ImageDataset)
+    dataset: Dataset = Field(default_factory=Dataset)
+
+@dataclass
+class Model:
+    _target_: str = "bioimage_embed.models.create_model"
+    model: str = "resnet18_vqvae"
+    input_dim: List[int] = Field(default_factory=lambda: [3, 224, 224])
+    latent_dim: int = 64
+    pretrained: bool = True
+
+
+@dataclass
+class LightningModel:
+    _target_: str = "bioimage_embed.lightning.torch.LitAutoEncoderTorch"
+    # This should be pythae base autoencoder?
+    model: Model = Field(default_factory=Model)
+    args: Recipe = Field(default_factory=Recipe)
+
+
+# ModelCheckpoint(dirpath=f"{self.model_dir}/", save_last=True)
+@dataclass
+class Trainer:
+    _target_: str = "pytorch_lightning.Trainer"
+    # logger: Optional[any]
+    gradient_clip_val: float = 0.5
+    enable_checkpointing: bool = True
+    devices: str = "auto"
+    accelerator: str = "auto"
+    accumulate_grad_batches: int = 16
+    # callbacks: List[Callback] = field(default_factory=list)
+    min_epochs: int = 50
+    max_epochs: int = 50  # Set a default or use a constructor to dynamically set this
+    log_every_n_steps: int = 1
+
+    # callbacks = [EarlyStopping(monitor="loss/val", mode="min")]
+
+
+# @dataclass
+# class Callbacks:
+#     _target_: Optional[List[Callback]]
+#     early_stopping: EarlyStopping = field(default_factory=EarlyStopping)
+#     model_checkpoint: ModelCheckpoint = field(default_factory=ModelCheckpoint)
+
+
+@dataclass
+class EarlyStopping:
+    _target_: str = "pytorch_lightning.callbacks.EarlyStopping"
+    monitor: str = "loss/val"
+    mode: str = "min"
+    patient: int = 3
+
+
+@dataclass
+class ModelCheckpoint:
+    _target_: str = "pytorch_lightning.callbacks.ModelCheckpoint"
+    save_last = True
+    save_top_k = 1
+    monitor = "loss/val"
+    mode = "min"
+
+
+@dataclass
+class Paths:
+    model: str = "models"
+    logs: str = "logs"
+    tensorboard: str = "tensorboard"
+    wandb: str = "wandb"
 
 
 @dataclass
 class Config:
+    paths: Paths = field(default_factory=Paths)
     recipe: Recipe = field(default_factory=Recipe)
     transform: Transform = field(default_factory=Transform)
-    # dataloader: DataLoader = field(default_factory=DataLoader)
+    dataset: ImageFolderDataset = field(default_factory=ImageFolderDataset)
+    dataloader: DataLoader = field(default_factory=DataLoader)
+    trainer: Trainer = field(default_factory=Trainer)
+    model: Model = field(default_factory=Model)
+    lit_model: LightningModel = field(default_factory=LightningModel)
+    # # callbacks: Callbacks = field(default_factory=Callbacks)
 
 
-
-def filter_dataset(dataset: torch.Tensor):
-  valid_indices = []
-  # Iterate through the dataset and apply the transform to each image
-  for idx in range(len(dataset)):
-    try:
-      image, label = dataset[idx]
-      # If the transform works without errors, add the index to the list of valid indices
-      valid_indices.append(idx)
-    except Exception as e:
-      # A better way to do with would be with batch collation
-      print(f"Error occurred for image {idx}: {e}")
+__schemas__ = {
+    "receipe": Recipe,
+    "transform": Transform,
+    "dataset": Dataset,
+    "dataloader": DataLoader,
+    "trainer": Trainer,
+    "model": Model,
+    "lit_model": LightningModel,
+}
