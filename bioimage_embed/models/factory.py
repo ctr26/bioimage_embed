@@ -191,7 +191,7 @@ MODELS = [
     "resnet50_vae_legacy",
 ]
 
-from typing import Tuple
+from typing import Any, Tuple
 
 
 def create_model(
@@ -205,14 +205,3 @@ def create_model(
     factory = ModelFactory(input_dim, latent_dim, pretrained, progress, **kwargs)
     return getattr(factory, model)()
 
-
-class CreateModel(nn.Module):
-    def __init__(
-        self, model, input_dim, latent_dim, pretrained=False, progress=True, **kwargs
-    ):
-        getattr(
-            super(ModelFactory, self).__init__(
-                input_dim, latent_dim, pretrained, progress, **kwargs
-            ),
-            model,
-        )
