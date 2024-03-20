@@ -173,7 +173,15 @@ class ModelFactory:
 
     def resnet152_vqvae_legacy(self):
         return self.resnet_vqvae_legacy(152)
-
+    
+    def __call__(self, model):
+       return getattr(self, model)()
+    #    return getattr(self
+    #         (
+    #             self.input_dim, self.latent_dim, self.pretrained, self.progress),
+    #         ),
+    #         model,
+    #     )
 
 MODELS = [
     "resnet18_vae",
