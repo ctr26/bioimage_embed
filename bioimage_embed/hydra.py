@@ -18,17 +18,19 @@ import os
 from typing import Optional
 from omegaconf import DictConfig, OmegaConf
 from pathlib import Path
+import torch
+import bioimage_embed
+from pydantic import BaseModel, conint, validator
+from pydantic.dataclasses import dataclass
+from bioimage_embed.lightning import DataModule
+from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
+from .lightning.torch import LitAutoEncoderTorch
+from pytorch_lightning.callbacks import EarlyStopping, Callback
+from typing import List, Optional
+from .config import Config, Recipe, Transform
+from torch.autograd import Variable
+from hydra.utils import instantiate
 
-from .data_model import Config
-
-# A.compose(DEFAULT_AUGMENTATION_LIST).to_dict()
-
-cs = ConfigStore.instance()
-cs.store(name="config", node=Config)
-
-
-def train():
-    main(job_name="test_app")
 
 
 def write_default_config_file(config_path):
@@ -53,3 +55,18 @@ def get_default_config(config_name="config"):
     with initialize(config_path=None, version_base=None):
         cfg = compose(config_name=config_name)
     return cfg
+
+
+
+def filter_dataset(dataset: torch.Tensor):
+    valid_indices = []
+    # Iterate through the dataset and apply the transform to each image
+    for idx in range(len(dataset)):
+        try:
+            image, label = dataset[idx]
+            # If the transform works without errors, add the index to the list of valid indices
+            valid_indices.append(idx)
+        except Exception as e:
+            # A better way to do with would be with batch collation
+            print(f"Error occurred for image {idx}: {e}")
+        return torch.utils.data.Subset(dataset, valid_indices)
