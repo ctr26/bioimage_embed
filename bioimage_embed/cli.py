@@ -24,6 +24,7 @@ def write_default_config_file(config_path):
         file.write(OmegaConf.to_yaml(cfg))
 
 
+# TODO make this work with typer (hard)
 # @hydra.main(config_path="conf", config_name="config")
 # def main(cfg: DictConfig):
 #     print(cfg)
@@ -31,7 +32,6 @@ def write_default_config_file(config_path):
 
 @hydra.main(config_path=".", config_name="config")
 def train(cfg: Config):
-    # print(OmegaConf.to_yaml(cfg))
     bie = BioImageEmbed(cfg)
     bie.train()
 
@@ -51,32 +51,12 @@ def get_default_config(config_name="config"):
     return cfg
 
 
-def filter_dataset(dataset: torch.Tensor):
-    valid_indices = []
-    # Iterate through the dataset and apply the transform to each image
-    for idx in range(len(dataset)):
-        try:
-            image, label = dataset[idx]
-            # If the transform works without errors, add the index to the list of valid indices
-            valid_indices.append(idx)
-        except Exception as e:
-            # A better way to do with would be with batch collation
-            print(f"Error occurred for image {idx}: {e}")
-        return torch.utils.data.Subset(dataset, valid_indices)
-
-
 if __name__ == "__main__":
     train()
 
-# def infer():
-#     main(job_name="test_app")
 
-
-# def main():
-#     app()
-
-# if __name__ == "__main__":
-#     main()
+def infer():
+    pass
 
 
 # app.command()(train)
