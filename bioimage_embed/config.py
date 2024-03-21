@@ -8,9 +8,8 @@ from omegaconf import OmegaConf
 import albumentations
 from dataclasses import dataclass, field
 from bioimage_embed.augmentations import (
-    DEFAULT_AUGMENTATION_LIST,
     DEFAULT_AUGMENTATION,
-    DEFAULT_AUGMENTATION_DICT,
+    DEFAULT_ALBUMENTATION,
 )
 import albumentations as A
 import os
@@ -23,11 +22,9 @@ from bioimage_embed.lightning import DataModule
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from .lightning.torch import LitAutoEncoderTorch
 from pytorch_lightning.callbacks import EarlyStopping, Callback
-from typing import List, Optional
-
+from typing import List, Optional, Dict
 from pydantic import BaseModel, Field
-
-
+import numpy as np
 
 @dataclass
 class Recipe:
@@ -57,24 +54,26 @@ class Recipe:
     data: str = "data"
 
 
+
+@dataclass
+class ATransform:
+    _target_: str = "albumentations.from_dict"
+    _convert_: str = "object"
+    # _convert_: str = "all"
+    transform_dict: Dict = Field(default_factory=lambda: DEFAULT_ALBUMENTATION.to_dict())
+
 @dataclass
 class Transform:
-    _target_: str = "albumentations.Compose"
-    transforms: dict = field(default_factory=lambda: DEFAULT_AUGMENTATION_DICT)
-    # transforms = Dict[str, Any] = Field(default_factory=lambda: DEFAULT_AUGMENTATION_DICT)
+    _target_: str = "bioimage_embed.augmentations.VisionWrapper"
+    _convert_: str = "object"
+    # transform: ATransform = field(default_factory=ATransform)
+    transform_dict: Dict = Field(default_factory=lambda: DEFAULT_ALBUMENTATION.to_dict())
 
-
-# # @dataclass
-# # class AlbumentationsTransform:
-# #     _target_: str = "albumentations.from_dict"
-# #     transform_dict: dict = field(default_factory=A.from_dict)
-# #     transform = A.from_dict(OmegaConf.to_container(cfg.albumentations, resolve=True))
-
-
+   
 @dataclass
 class Dataset:
     _target_: str = "torch.utils.data.Dataset"
-    # transform: Transform = Field(default_factory=Transform)
+    transform: Transform = Field(default_factory=Transform)
     # root: str = ""
     # @validator("path")
     # def validate_path(cls, root: str) -> Path:
@@ -82,11 +81,13 @@ class Dataset:
     #         print("exist")
     #     return Path(root)
 
+
 @dataclass
 class ImageFolderDataset(Dataset):
     _target_: str = "torchvision.datasets.ImageFolder"
-    transform: Transform = Field(default_factory=Transform)
+    # transform: Transform = Field(default_factory=Transform)
     root: str = "data"
+
     @validator("path")
     def validate_path(cls, root: str) -> Path:
         if Path(root).exists():
@@ -94,17 +95,17 @@ class ImageFolderDataset(Dataset):
         return Path(root)
 
 
-
-
 @dataclass
 class DataLoader:
     _target_: str = "bioimage_embed.lightning.dataloader.DataModule"
     dataset: Dataset = Field(default_factory=Dataset)
+    num_workers: int = 1
+
 
 @dataclass
 class Model:
     _target_: str = "bioimage_embed.models.create_model"
-    model: str = "resnet18_vqvae"
+    model: str = "resnet18_vae"
     input_dim: List[int] = Field(default_factory=lambda: [3, 224, 224])
     latent_dim: int = 64
     pretrained: bool = True
@@ -132,6 +133,7 @@ class Trainer:
     min_epochs: int = 50
     max_epochs: int = 50  # Set a default or use a constructor to dynamically set this
     log_every_n_steps: int = 1
+    # precision: int = 32
 
     # callbacks = [EarlyStopping(monitor="loss/val", mode="min")]
 
