@@ -44,7 +44,13 @@ class ModelFactory:
             encoder=encoder,
             decoder=decoder,
         )
-
+    def dummy_model(self):
+        return self.create_model(
+            pythae.models.VAEConfig,
+            pythae.models.VAE,
+            lambda x: None,
+            lambda x: None,
+        )
     def resnet_vae_bolt(
         self,
         enc_type,
@@ -197,6 +203,7 @@ MODELS = [
     "resnet152_vqvae_legacy",
     "resnet18_vae_legacy",
     "resnet50_vae_legacy",
+    "dummy_model",
 ]
 
 from typing import Any, Tuple
