@@ -1,31 +1,13 @@
-from hydra.core.config_store import ConfigStore
 from dataclasses import dataclass
-from hydra import compose, initialize
-from omegaconf import OmegaConf
-from types import SimpleNamespace
-from hydra.core.config_store import ConfigStore
-from omegaconf import OmegaConf
-import albumentations
 from dataclasses import dataclass, field
 from bioimage_embed.augmentations import (
-    DEFAULT_AUGMENTATION,
     DEFAULT_ALBUMENTATION,
 )
-import albumentations as A
 import os
 from typing import Optional
-from omegaconf import DictConfig, OmegaConf
-from pathlib import Path
-from pydantic import BaseModel, conint, validator
 from pydantic.dataclasses import dataclass
-from bioimage_embed.lightning import DataModule
-from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
-from .lightning.torch import LitAutoEncoderTorch
-from pytorch_lightning.callbacks import EarlyStopping, Callback
 from typing import List, Optional, Dict
 from pydantic import BaseModel, Field, field_validator, root_validator
-import numpy as np
-
 
 @dataclass
 class Recipe:
