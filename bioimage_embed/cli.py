@@ -1,7 +1,10 @@
+
+from pl_bolts.utils.stability import UnderReviewWarning
+import warnings
+warnings.simplefilter(action="ignore", category=UnderReviewWarning)
+
 from typer import Typer
 from bioimage_embed.bioimage_embed import BioImageEmbed
-from dataclasses import dataclass
-import torch
 
 from omegaconf import OmegaConf
 from hydra import compose, initialize
@@ -32,8 +35,10 @@ def write_default_config_file(config_path):
 
 @hydra.main(config_path=".", config_name="config")
 def train(cfg: Config):
+# def train(cfg):
     bie = BioImageEmbed(cfg)
     bie.train()
+    pass
 
 
 def init_hydra(config_dir="conf", config_file="config.yaml", job_name="bie"):
