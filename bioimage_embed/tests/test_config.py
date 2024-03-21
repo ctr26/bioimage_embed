@@ -21,9 +21,14 @@ def test_instantiate(Schema):
 
 @pytest.fixture
 def cfg():
-
     # dataset = config.ImageFolderDataset(root="data")
-    return config.Config()
+    input_dim = [3, 224, 224]
+    mock_dataset = config.ImageFolderDataset(
+        _target_="bioimage_embed.datasets.FakeImageFolder",
+        image_size=input_dim,
+    )
+    model = config.Model(input_dim=input_dim)
+    return config.Config(dataset=mock_dataset,model=model)
 
 
 def test_config(cfg):
@@ -31,11 +36,8 @@ def test_config(cfg):
 
 
 def test_bioimage_embed(cfg):
-    mock_dataset = config.ImageFolderDataset(
-        _target_="bioimage_embed.datasets.FakeImageFolder",
-    )
-    cfg = config.Config(dataset=mock_dataset)
     bie = bioimage_embed.BioImageEmbed(cfg)
+    bie.model_check()
 
 
 # def mock_dataset(root="data", *args, **kwargs):
