@@ -55,32 +55,30 @@ class Recipe:
     data: str = "data"
 
 
-
 @dataclass
 class ATransform:
     _target_: str = "albumentations.from_dict"
     _convert_: str = "object"
     # _convert_: str = "all"
-    transform_dict: Dict = Field(default_factory=lambda: DEFAULT_ALBUMENTATION.to_dict())
+    transform_dict: Dict = Field(
+        default_factory=lambda: DEFAULT_ALBUMENTATION.to_dict()
+    )
+
 
 @dataclass
 class Transform:
     _target_: str = "bioimage_embed.augmentations.VisionWrapper"
     _convert_: str = "object"
     # transform: ATransform = field(default_factory=ATransform)
-    transform_dict: Dict = Field(default_factory=lambda: DEFAULT_ALBUMENTATION.to_dict())
+    transform_dict: Dict = Field(
+        default_factory=lambda: DEFAULT_ALBUMENTATION.to_dict()
+    )
 
-   
+
 @dataclass
 class Dataset:
-    _target_: str = "torch.utils.data.Dataset"
+    # _target_: str = "torch.utils.data.Dataset"
     transform: Transform = Field(default_factory=Transform)
-    # root: str = ""
-    # @validator("path")
-    # def validate_path(cls, root: str) -> Path:
-    #     if Path(root).exists():
-    #         print("exist")
-    #     return Path(root)
 
 
 @dataclass
@@ -88,12 +86,6 @@ class ImageFolderDataset(Dataset):
     _target_: str = "torchvision.datasets.ImageFolder"
     # transform: Transform = Field(default_factory=Transform)
     root: str = "data"
-
-    @validator("path")
-    def validate_path(cls, root: str) -> Path:
-        if Path(root).exists():
-            print("exist")
-        return Path(root)
 
 
 @dataclass
