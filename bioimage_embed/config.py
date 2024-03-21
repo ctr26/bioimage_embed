@@ -23,8 +23,9 @@ from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from .lightning.torch import LitAutoEncoderTorch
 from pytorch_lightning.callbacks import EarlyStopping, Callback
 from typing import List, Optional, Dict
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, root_validator
 import numpy as np
+
 
 @dataclass
 class Recipe:
@@ -168,6 +169,16 @@ class Paths:
     logs: str = "logs"
     tensorboard: str = "tensorboard"
     wandb: str = "wandb"
+
+    @root_validator(
+        pre=False, skip_on_failure=True
+    )  # Ensures this runs after all other validations
+    @classmethod
+    def create_dirs(cls, values):
+        # The `values` dict contains all the validated field values
+        for path in values.values():
+            os.makedirs(path, exist_ok=True)
+        return values
 
 
 @dataclass
