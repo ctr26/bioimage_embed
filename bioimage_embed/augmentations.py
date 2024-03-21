@@ -71,18 +71,14 @@ DEFAULT_AUGMENTATION = transforms.Compose(
 )
 
 
-class AlbumentationsVisionWrapper(A.Compose):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.transform = A.from_dict(self.transforms)
+class VisionWrapper:
+    def __init__(self, transform_dict, *args, **kwargs):
+        self.transform_dict = transform_dict
+        self.transform = A.from_dict(transform_dict)
 
     def __call__(self, image):
-        # Convert PIL Image to numpy array as Albumentations works with numpy arrays
-        image_np = np.array(image)
-        # Apply the transformations
-        transformed = super().__call__(image=image_np)
-        augmented = self.transforms(image=image_np)
-        # Return the transformed image
+        img = np.array(image)
+        transformed = self.transform(image=img)
         return transformed["image"]
 
 # class AlbumentationsTransform:
@@ -94,4 +90,4 @@ class AlbumentationsVisionWrapper(A.Compose):
 #         img = np.array(img)
 #         # Apply transformations
 #         transformed = self.transform(image=img)
-#         return transformed['image']
+#         return transformed["image"]
