@@ -9,11 +9,25 @@ import numpy as np
 from PIL import Image
 
 
-
 from functools import lru_cache
 
 from albumentations import Compose
 from typing import Callable
+import torch
+
+
+def filter_dataset(dataset: torch.Tensor):
+    valid_indices = []
+    # Iterate through the dataset and apply the transform to each image
+    for idx in range(len(dataset)):
+        try:
+            image, label = dataset[idx]
+            # If the transform works without errors, add the index to the list of valid indices
+            valid_indices.append(idx)
+        except Exception as e:
+            # A better way to do with would be with batch collation
+            print(f"Error occurred for image {idx}: {e}")
+        return torch.utils.data.Subset(dataset, valid_indices)
 
 
 class DatasetGlob(Dataset):
@@ -69,7 +83,6 @@ class DatasetGlob(Dataset):
             return False
         else:
             return True
-
 
     # def __getitem__(self, index):
     #     x = self.getitem(index)
