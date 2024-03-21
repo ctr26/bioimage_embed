@@ -28,26 +28,50 @@ class BioImageEmbed:
 
     def __init__(self, cfg: Config):
         self.cfg = cfg
-        self.model = instantiate(cfg.model)
-        self.recipe = instantiate(cfg.recipe)
-        # self.model_dir = "models/"
-        self.lit_model = instantiate(cfg.lit_model, model=cfg.model, args=cfg.recipe)
+
         # self.logger = initialize(cfg.logger)
-        self.dataset = instantiate(
-            cfg.dataset,
-            root=cfg.recipe.data,
-            transform=cfg.transform,
-        )
+        # a_wrapper = lambda x: self.albumentation(image=x)["image"]
+        cfg.dataset.root = cfg.recipe.data
+        cfg.dataset.transform = cfg.transform
+
+        cfg.lit_model.model = cfg.model
+        cfg.lit_model.args = cfg.recipe
+        # self.albumentation = instantiate(cfg.transform)
+        # TODO this maybe a hack to get albumentations to work
+        # I think this can be done in the original dataclass
+        # self.transform_dict = instantiate(cfg.transform.transform_dict, _convert_="object")
+
+        self.recipe = instantiate(cfg.recipe)
         self.dataloader = instantiate(cfg.dataloader, dataset=cfg.dataset)
         # self.callbacks = initialize(cfg.callbacks)
         self.callbacks = None
-        # self.trainer = instantiate(cfg.trainer, callbacks=[self.callbacks])
         self.trainer = instantiate(cfg.trainer)
+        self.paths = instantiate(cfg.paths)
+        self.lit_model = instantiate(cfg.lit_model)
+        self.setup()
+
+    def setup(self):
+        self.make_dirs()
+        self.dataloader.setup()
+        self.lit_model.model.eval()
+
+    def model_check(self):
+        data = self.dataloader.dataset[0]
+        dataloader_0 = next(iter(self.dataloader.train_dataloader()))
+        output = self.lit_model(dataloader_0)
+        logging.info("Model Check Passed")
+
+    def trainer_check(self):
+        trainer = instantiate(self.cfg.trainer, fast_dev_run=True)
+        trainer.fit(self.lit_model, self.dataloader)
+        logging.info("Trainer Check Passed")
 
     # TODO fix resume
+    def make_dirs(self):
+        for path in self.paths.values():
+            os.makedirs(path, exist_ok=True)
 
     def train(self, resume: bool = True):
-        self.model.eval()
         try:
             self.trainer.fit(
                 self.lit_model,
@@ -81,21 +105,3 @@ class BioImageEmbed:
 
     def export(self):
         example_input = Variable(torch.rand(1, *self.cfg.recipe.input_dim))
-
-
-# class BioImageEmbed:
-#     def __init__(self, cfg: Config):
-#         self.cfg = cfg
-
-#     def load_data(self):
-#         self.dataloader.setup()
-
-#     def train(self):
-#         lit_model = LitAutoEncoderTorch(self.model, self.recipe)
-#         self.model.eval()
-#         checkpoint_callback = ModelCheckpoint(dirpath=f"{model_dir}/", save_last=True)
-
-#     # def get_model_path(self):
-#     #       model_dir = f"my_models/{dataset_path}_{model._get_name()}_{lit_model._get_name()}"
-
-#     # pass
