@@ -1,6 +1,7 @@
 from typing import Any, Tuple
 from torchvision.datasets import FakeData, ImageFolder
 from torchvision.transforms import ToTensor
+import albumentations as A
 
 
 class FakeImageFolder(FakeData):
@@ -20,19 +21,5 @@ class FakeImageFolder(FakeData):
             size=size,
             image_size=image_size,
             num_classes=num_classes,
-            transform=ToTensor(),
+            transform=transform,
         )
-
-    #     super().__init__(root=root, transform=transform, target_transform=target_transform)
-
-    #     # Initialize FakeData with parameters that match your use case
-    #     self.data = FakeData(
-    #         size=size,
-    #         image_size=image_size,
-    #         num_classes=num_classes,
-    #         transform=ToTensor(),
-    #     )
-
-    # def __getitem__(self, index: int) -> Tuple[Any, Any]:
-    #     # Directly return the item from FakeData
-    #     return self.data[index]
