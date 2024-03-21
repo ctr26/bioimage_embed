@@ -25,8 +25,8 @@ class MaskEmbed(LitAutoEncoderTorch):
         Batch is expected to be normalised to the window size which will be the same or smaller than the image size in question.
         The batch is also optionally frobenius normalised to make the loss function invariant to the size of the shape.
         """
-        x = batch[0].float()
-        output = super().batch_to_tensor(x)
+        # x = batch[0].float()
+        output = super().batch_to_tensor(batch)
         normalised_data = output["data"]
         if self.args.frobenius_norm:
             scalings = frobenius_norm_2D_torch(output["data"])

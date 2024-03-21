@@ -62,7 +62,8 @@ class LitAutoEncoderTorch(pl.LightningModule):
         # return self.model.forward(batch)
 
     def batch_to_tensor(self, batch):
-        return ModelOutput(data=batch)
+        x,y = batch
+        return ModelOutput(data=x.float(), target=y)
 
     def embedding_from_output(self, model_output):
         return model_output.z.view(model_output.z.shape[0], -1)
