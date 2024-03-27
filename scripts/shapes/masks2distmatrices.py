@@ -1,27 +1,16 @@
 # Imports when necessary
 import numpy as np
-import torch
-import logging
-import sklearn
 import skimage as sk
 import scipy.spatial
 from scipy.interpolate import splprep, splev
-import matplotlib.image
 import matplotlib.pyplot as plt
 import glob
 
 from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.manifold import MDS
  
-from bioimage_embed import shapes
-import bioimage_embed
-from pytorch_lightning import loggers as pl_loggers
-from torchvision import transforms
-from bioimage_embed.lightning import DataModule
 
-from torchvision import datasets
-
-from bioimage_embed.shapes.mds import mds
+from torchvision import datasets, transforms
 
 from bioimage_embed.shapes.transforms import (
     CropCentroidPipeline,
@@ -30,24 +19,39 @@ from bioimage_embed.shapes.transforms import (
     RotateIndexingClockwise,
 )
 
-logger = logging.getLogger(__name__)
-
 # Where is the datat I want to transform
-dataset = f"/nfs/research/uhlmann/afoix/bbbc010/BBBC010_v1_foreground_eachworm/"
+#folder_path = f"/nfs/research/uhlmann/afoix/bbbc010/BBBC010_v1_foreground_eachworm/"
+folder_path = f"/nfs/research/uhlmann/afoix/tiny_synthcellshapes_dataset/"
 
 ##########################################################################
 ####### Simplified version in order to make the things properly work #####
 ##########################################################################
 
+def rgb2grey(rgb, cr = 0.2989, cg = 0.5870, cb = 0.1140):
+  """Turn an rgb array into a greyscale array using the following reduction:
+     grey = cr * r + cg * g + cb * b
+
+    :param rgb: The rgb array
+    :param cr: The red coefficient
+    :param cg: The green coefficient
+    :param cb: The blue coefficient
+
+    :returns: The greyscale array.
+    """
+  r, g, b = rgb[:,:,0], rgb[:,:,1], rgb[:,:,2]
+  return cr * r + cg * g + cb * b
+
 def find_contour(mask):
+    if len(mask.shape) == 3: # (lines, columns, number of channels)
+      mask = rgb2grey(mask)
     contour = sk.measure.find_contours(mask, 0.8)[0]
     x, y = contour[:, 0], contour[:, 1]
     return x, y
 
-def spline_interpolation(x, y):
-    sparsity_contour = 4 # Sparsity of the contour. Dropping some of the sample (points) to make the spline smoother
+def spline_interpolation(x, y, sparsity_contour = 4, sample_points = 200):
+    # Sparsity of the contour. Dropping some of the sample (points) to make the spline smoother
+    sparsity_contour = max(1, sparsity_contour)
     tck, u = splprep([x[::sparsity_contour], y[::sparsity_contour]], s = 0)
-    sample_points = 200
     # How many times to sample the spline
     new_u = np.linspace(u.min(), u.max(), sample_points) # Last parameter is how dense is our spline, how many points. 
     # Evaluate the spline
@@ -63,9 +67,28 @@ def dist_to_coords(dst_mat):
   embedding = MDS(n_components=2, dissimilarity='precomputed')
   return embedding.fit_transform(dst_mat)
     
+def mask2distmatrix(mask):
+  # extract mask contour
+  x, y = find_contour(mask)
+  # Reinterpolate (spline)
+  x_reinterpolated, y_reinterpolated = spline_interpolation(x, y)
+  # Build the distance matrix
+  dm = build_distance_matrix(x_reinterpolated, y_reinterpolated)
+  return dm
+
+def masks2distmatrices(mask_dataset_path=folder_path, output_path=None):
+  print('loading base dataset')
+  dataset = datasets.ImageFolder(mask_dataset_path, transform=transforms.Compose([
+    np.array,
+    mask2distmatrix
+  ]))
+  for idx, data in enumerate(dataset):
+    print(f'idx: {idx}')
+    print(f'data: {data}')
+    #torch.save(data, 'data_drive_path{}'.format(idx))
 
 # Simplified version for test
-def process_png_file(mask_path):
+def process_png_file(mask_path, idx, output_folder='./results/reconstruction'):
     # Perform specific action for each PNG file
     print("Processing:", mask_path)
     mask = plt.imread(mask_path)
@@ -76,11 +99,12 @@ def process_png_file(mask_path):
     # Reinterpolate (spline)
     x_reinterpolated, y_reinterpolated = spline_interpolation(x, y)
     plt.scatter(x_reinterpolated, y_reinterpolated, s=6)
-    plt.savefig(f'results/reconstruction/original_contour{i}.png')
+    plt.savefig(f'{output_folder}/original_contour{idx}.png')
     plt.clf()
 
     # Build the distance matrix
     dm = build_distance_matrix(x_reinterpolated, y_reinterpolated)
+    np.save(f"{output_folder}/matrix_{idx}.npy", dm)
     # print("Distance matrix")
     # print(dm)
 
@@ -88,28 +112,32 @@ def process_png_file(mask_path):
     reconstructed_coords = dist_to_coords(dm)
     print(reconstructed_coords)
     plt.scatter(*zip(*reconstructed_coords), s=6)
-    plt.savefig(f'results/reconstruction/reconstructed_contour{i}.png')
+    plt.savefig(f'{output_folder}/reconstructed_contour{idx}.png')
     plt.clf()
     reconstructed_matrix = euclidean_distances(reconstructed_coords)
 
     # Error with matrix
     err = np.average(dm - reconstructed_matrix)
     print(f"Dist error is: {err}")
+###############################################################################
 
-# Specify the folder path containing PNG files
-folder_path = "/nfs/research/uhlmann/afoix/bbbc010/BBBC010_v1_foreground_eachworm/*/*.png"
+if __name__ == "__main__":
 
-# Use glob to find all PNG files in the folder
-png_files = glob.glob(folder_path)
+  ## Use glob to find all PNG files in the folder
+  #png_files = glob.glob(folder_path+"*/*.png")
+  #
+  ## Iterate through all PNG files found
+  #for i, file_path in enumerate(png_files):
+  #    # Process the PNG file
+  #    process_png_file(file_path, i)
 
-# Iterate through all PNG files found
-for i, file_path in enumerate(png_files):
-    # Process the PNG file
-    process_png_file(file_path)
+  masks2distmatrices()
 
 
 
-
+###############################################################################
+###############################################################################
+###############################################################################
 ########################################
 ############# Other code ###############
 ########################################
