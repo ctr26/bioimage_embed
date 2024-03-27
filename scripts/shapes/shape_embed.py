@@ -223,7 +223,7 @@ def shape_embed_process(clargs):
     # window_size, interp_size, matrix_normalised=False
     # )
     transform_coord_to_dist = CoordsToDistogram(interp_size, matrix_normalised=False)
-    transform_mdscoords = DistogramToCoords(window_size)
+    #transform_mdscoords = DistogramToCoords(window_size)
     transform_coords = ImageToCoords(window_size)
 
     transform_mask_to_gray = transforms.Compose([transforms.Grayscale(1)])

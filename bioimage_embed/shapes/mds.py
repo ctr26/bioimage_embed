@@ -9,11 +9,12 @@ def mds(d):
     :return: A matrix of x, y coordinates.
     """
     n = d.size(0)
-    I = torch.eye(n)
+    I = torch.eye(n, dtype=torch.float64)
     H = I - torch.ones((n, n)) / n
 
     S = -0.5 * H @ d @ H
-    eigvals, eigvecs = S.symeig(eigenvectors=True)
+    #eigvals, eigvecs = S.symeig(eigenvectors=True)
+    eigvals, eigvecs = torch.linalg.eigh(S)
 
     # Sort the eigenvalues and eigenvectors in decreasing order
     idx = eigvals.argsort(descending=True)
