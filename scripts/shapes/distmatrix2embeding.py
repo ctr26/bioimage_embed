@@ -60,7 +60,7 @@ def main_process(params):
     trainer = pl.Trainer(
         #TODO logger=[wandblogger, tb_logger],
         gradient_clip_val=0.5,
-        enable_checkpointing=True,
+        enable_checkpointing=False,
         devices=1,
         #TODO accelerator="gpu",
         accumulate_grad_batches=4,
