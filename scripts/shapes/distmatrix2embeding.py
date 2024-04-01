@@ -1,9 +1,11 @@
 from torchvision import datasets, transforms
 import pytorch_lightning as pl
+import numpy as np
 import bioimage_embed
 import bioimage_embed.shapes
 import bioimage_embed.lightning
 import argparse
+import torch
 import types
 
 # misc helpers
@@ -27,9 +29,10 @@ def main_process(params):
     ###########################################################################
 
     preproc_transform = transforms.Compose([
-        transforms.ToTensor(),
+        torch.as_tensor, # turn (H,W) numpy array into a (H,W) tensor
+        lambda x: x.repeat(3, 1, 1) # turn (H,W) tensor into a (3,H,W) tensor (to fit downstream model expectations)
     ])
-    dataset = datasets.ImageFolder(params.dataset[1], transform = preproc_transform)
+    dataset = datasets.DatasetFolder(params.dataset[1], loader=np.load, extensions=('npy'), transform = preproc_transform)
     dataloader = bioimage_embed.lightning.DataModule(
         dataset,
         batch_size=params.batch_size,
