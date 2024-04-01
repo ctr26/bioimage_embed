@@ -62,7 +62,7 @@ def main_process(params):
         gradient_clip_val=0.5,
         enable_checkpointing=False,
         devices=1,
-        #TODO accelerator="gpu",
+        accelerator="gpu",
         accumulate_grad_batches=4,
         #TODO callbacks=[checkpoint_callback],
         min_epochs=50,
