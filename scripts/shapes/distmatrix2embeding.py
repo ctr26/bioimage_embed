@@ -75,7 +75,7 @@ def main_process(params):
 
     # Pull the embedings
     ###########################################################################
-    vprint(1, f'TODO')
+    vprint(1, f'TODO: pull the embedings')
 
 # default parameters
 ###############################################################################
