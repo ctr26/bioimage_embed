@@ -4,6 +4,7 @@ import numpy as np
 import bioimage_embed
 import bioimage_embed.shapes
 import bioimage_embed.lightning
+from bioimage_embed.lightning import DataModule
 import argparse
 import torch
 import types
@@ -72,10 +73,38 @@ def main_process(params):
     trainer.fit(lit_model, datamodule=dataloader)
     lit_model.eval()
     vprint(1, f'trainer fitted')
-
-    # Pull the embedings
+    
+    #TODO: Validate the model
+    ########################################################################### 
+    vprint(1, f'TODO: Validate the model')
+    validation = trainer.validate(lit_model, datamodule=dataloader)
+    
+    #TODO: Test the model
+    ###########################################################################  
+    vprint(1, f'TODO: Test the model')
+    testing = trainer.test(lit_model, datamodule=dataloader)
+    
+    # Inference on full dataset
+    dataloader = DataModule(
+        dataset,
+        batch_size=1,
+        shuffle=False,
+        num_workers=params.num_workers,
+        # Transform is commented here to avoid augmentations in real data
+        # HOWEVER, applying the transform multiple times and averaging the results might produce better latent embeddings
+        # transform=transform,
+    )
+    dataloader.setup()
+    
+    predictions = trainer.predict(lit_model, datamodule=dataloader)
+    
+    #TODO: Pull the embedings
     ###########################################################################
     vprint(1, f'TODO: pull the embedings')
+    # Use the namespace variables
+    latent_space = torch.stack([d.out.z.flatten() for d in predictions])
+    # Save the latent space
+    np.save('latent_space.npy', latent_space)
 
 # default parameters
 ###############################################################################
