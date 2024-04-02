@@ -6,6 +6,7 @@ import bioimage_embed.shapes
 import bioimage_embed.lightning
 from bioimage_embed.lightning import DataModule
 import argparse
+import datetime
 import torch
 import types
 
@@ -21,6 +22,21 @@ def vprint(tgtlvl, msg, pfx = f"{'':<5}"):
     vprint.lvl = 0
     vprint(tgtlvl, msg)
 
+def maybe_roll (dist_mat, p = 0.5):
+  if np.random.rand() < p:
+    return np.roll(dist_mat, np.random.randint(0, dist_mat.shape[0]), (0,1))
+  else:
+    return dist_mat
+
+def sanity_check (dist_mat):
+  if not np.allclose(dist_mat, dist_mat.T):
+    raise ValueError("Matrix is not symmetric")
+  if np.any(dist_mat < 0):
+    raise ValueError("Matrix has negative values")
+  if np.any(np.diag(dist_mat)):
+    raise ValueError("Matrix has non-zero diagonal")
+  return dist_mat
+
 # Main process
 ###############################################################################
 
@@ -30,10 +46,14 @@ def main_process(params):
     ###########################################################################
 
     preproc_transform = transforms.Compose([
+        lambda x: x / np.linalg.norm(x, "fro"), # normalize the matrix
+        lambda x: maybe_roll(x, p = 1.0), # "potentially" roll the matrix
+        sanity_check, # check if the matrix is symmetric and positive, and the diagonal is zero
         torch.as_tensor, # turn (H,W) numpy array into a (H,W) tensor
         lambda x: x.repeat(3, 1, 1) # turn (H,W) tensor into a (3,H,W) tensor (to fit downstream model expectations)
     ])
     dataset = datasets.DatasetFolder(params.dataset[1], loader=np.load, extensions=('npy'), transform = preproc_transform)
+    #dataset = datasets.DatasetFolder(params.dataset[1], loader=lambda x: np.load(x, allow_pickle=True), extensions=('npy'), transform = preproc_transform)
     dataloader = bioimage_embed.lightning.DataModule(
         dataset,
         batch_size=params.batch_size,
@@ -104,7 +124,7 @@ def main_process(params):
     # Use the namespace variables
     latent_space = torch.stack([d.out.z.flatten() for d in predictions])
     # Save the latent space
-    np.save('latent_space.npy', latent_space)
+    np.save(f'{params.dataset[0]}_{str(datetime.datetime.now()).replace(" ", "_")}.npy', latent_space)
 
 # default parameters
 ###############################################################################
