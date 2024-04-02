@@ -8,6 +8,7 @@ from bioimage_embed.lightning import DataModule
 from pytorch_lightning import loggers as pl_loggers
 import argparse
 import datetime
+import pathlib
 import torch
 import types
 
@@ -125,13 +126,22 @@ def main_process(params):
     
     predictions = trainer.predict(lit_model, datamodule=dataloader)
     
-    #TODO: Pull the embedings
+    #TODO: Pull the embedings and reconstructed distance matrices
     ###########################################################################
-    vprint(1, f'TODO: pull the embedings')
+    vprint(1, f'pull the embedings')
     # Use the namespace variables
     latent_space = torch.stack([d.out.z.flatten() for d in predictions])
+    # create the output directory
+    output_dir = params.output_dir
+    if output_dir is None:
+      output_dir = f'./{params.model}_{params.latent_dim}_{params.batch_size}_{params.dataset[0]}_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}'
+    pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
     # Save the latent space
-    np.save(f'{params.dataset[0]}_{str(datetime.datetime.now()).replace(" ", "_")}.npy', latent_space)
+    np.save(f'{output_dir}/latent_space.npy', latent_space)
+    # Save the reconstructions
+    for i, pred in enumerate(predictions):
+      np.save(f'{output_dir}/original_{i}.npy', pred.x.data[0,0])
+      np.save(f'{output_dir}/reconstruction_{i}.npy', pred.out.recon_x[0,0])
 
 # default parameters
 ###############################################################################
@@ -201,6 +211,9 @@ if __name__ == "__main__":
         '-d', '--dataset', nargs=2, metavar=('NAME', 'PATH')
       , help=f"The NAME of and PATH to the dataset (default: {params.dataset})")
     parser.add_argument(
+        '-o', '--output-dir', metavar='OUTPUT_DIR', default=None
+      , help=f"The OUTPUT_DIR path to use to dump results")
+    parser.add_argument(
         '--wandb-entity', default="foix", metavar='WANDB_ENTITY'
       , help=f"The WANDB_ENTITY name")
     parser.add_argument(
@@ -232,6 +245,7 @@ if __name__ == "__main__":
     # update default params with clargs
     if clargs.model:
       params.model = clargs.model
+    params.output_dir = clargs.output_dir
     if clargs.dataset:
       params.dataset = clargs.dataset
     if clargs.wandb_entity:
