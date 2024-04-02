@@ -5,6 +5,7 @@ import bioimage_embed
 import bioimage_embed.shapes
 import bioimage_embed.lightning
 from bioimage_embed.lightning import DataModule
+from pytorch_lightning import loggers as pl_loggers
 import argparse
 import datetime
 import torch
@@ -75,11 +76,17 @@ def main_process(params):
     lit_model = bioimage_embed.shapes.MaskEmbed(model, params)
     vprint(1, f'model ready')
 
+    # WandB logger
+    ###########################################################################
+    jobname = f"{params.model}_{params.latent_dim}_{params.batch_size}_{params.dataset[0]}"
+    wandblogger = pl_loggers.WandbLogger(entity=params.wandb_entity, project=params.wandb_project, name=jobname)
+    wandblogger.watch(lit_model, log="all")
+
     # Train the model
     ###########################################################################
     
     trainer = pl.Trainer(
-        #TODO logger=[wandblogger, tb_logger],
+        logger=[wandblogger],
         gradient_clip_val=0.5,
         enable_checkpointing=False,
         devices=1,
@@ -194,8 +201,11 @@ if __name__ == "__main__":
         '-d', '--dataset', nargs=2, metavar=('NAME', 'PATH')
       , help=f"The NAME of and PATH to the dataset (default: {params.dataset})")
     parser.add_argument(
-        '-w', '--wandb-project', default="shape-embed", metavar='PROJECT'
-      , help=f"The wandb PROJECT name")
+        '--wandb-entity', default="foix", metavar='WANDB_ENTITY'
+      , help=f"The WANDB_ENTITY name")
+    parser.add_argument(
+        '--wandb-project', default="simply-shape", metavar='WANDB_PROJECT'
+      , help=f"The WANDB_PROJECT name")
     parser.add_argument(
         '-b', '--batch-size', metavar='BATCH_SIZE', type=auto_pos_int
       , help=f"The BATCH_SIZE for the run, a positive integer (default {params.batch_size})")
@@ -224,6 +234,8 @@ if __name__ == "__main__":
       params.model = clargs.model
     if clargs.dataset:
       params.dataset = clargs.dataset
+    if clargs.wandb_entity:
+      params.wandb_entity = clargs.wandb_entity
     if clargs.wandb_project:
       params.wandb_project = clargs.wandb_project
     if clargs.batch_size:
