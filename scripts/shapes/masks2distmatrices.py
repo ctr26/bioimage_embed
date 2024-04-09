@@ -51,7 +51,9 @@ def find_longest_contour(mask):
 def spline_interpolation(x, y, raw_sampling_sparsity, spline_sampling):
     # Sparsity of the contour. Dropping some of the sample (points) to make the spline smoother
     raw_sampling_sparsity = max(1, raw_sampling_sparsity)
-    tck, u = splprep([x[::raw_sampling_sparsity], y[::raw_sampling_sparsity]], s = 0)
+    vprint(3, f'running with raw_sampling_sparsity {raw_sampling_sparsity} and spline_sampling {spline_sampling}')
+    vprint(3, f'x.shape {x.shape} y.shape {y.shape}')
+    tck, u = splprep([x[::raw_sampling_sparsity], y[::raw_sampling_sparsity]], s = 0, per = True)
     # How many times to sample the spline
     new_u = np.linspace(u.min(), u.max(), spline_sampling) # Last parameter is how dense is our spline, how many points.
     # Evaluate the spline
