@@ -185,7 +185,7 @@ params = types.SimpleNamespace(**{
     "commitment_cost": 0.25,
     "decay": 0.99,
     "frobenius_norm": False,
-    "dataset": ("tiny_dist", "/nfs/research/uhlmann/afoix/tiny_synthcellshapes_dataset_distmat"),
+    "dataset": ("tiny_dist", "/nfs/research/uhlmann/afoix/distmat_datasets/tiny_synthcellshapes_dataset_distmat"),
     # optimizer_params
     "opt": "AdamW",
     "lr": 0.001,
