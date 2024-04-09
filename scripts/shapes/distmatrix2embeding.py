@@ -127,7 +127,10 @@ def main_process(params):
     )
     dataloader.setup()
     
+    # Predict
+    ###########################################################################
     predictions = trainer.predict(lit_model, datamodule=dataloader)
+    class_indices = np.array([int(data[-1]) for data in dataloader.predict_dataloader()])
     
     #TODO: Pull the embedings and reconstructed distance matrices
     ###########################################################################
@@ -142,9 +145,12 @@ def main_process(params):
     # Save the latent space
     np.save(f'{output_dir}/latent_space.npy', latent_space)
     # Save the reconstructions
-    for i, pred in enumerate(predictions):
-      np.save(f'{output_dir}/original_{i}.npy', pred.x.data[0,0])
-      np.save(f'{output_dir}/reconstruction_{i}.npy', pred.out.recon_x[0,0])
+    for class_label in dataset.classes:
+      pathlib.Path(f'{output_dir}/{class_label}').mkdir(parents=True, exist_ok=True)
+    for i, (pred, class_idx) in enumerate(zip(predictions, class_indices)):
+      class_label = dataset.classes[class_idx]
+      np.save(f'{output_dir}/{class_label}/original_{i}_{class_label}.npy', pred.x.data[0,0])
+      np.save(f'{output_dir}/{class_label}/reconstruction_{i}_{class_label}.npy', pred.out.recon_x[0,0])
 
 # default parameters
 ###############################################################################
