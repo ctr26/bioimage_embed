@@ -18,7 +18,6 @@ def vprint(tgtlvl, msg, pfx = f"{'':<5}"):
     print("verbosity level not set, defaulting to 0")
     vprint.lvl = 0
     vprint(tgtlvl, msg)
-    #return dm
 
 def asym_to_sym(asym_dist_mat):
   return np.max(np.stack([asym_dist_mat, asym_dist_mat.T]), axis=0)
