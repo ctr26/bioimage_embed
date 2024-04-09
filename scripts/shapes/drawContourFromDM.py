@@ -36,6 +36,7 @@ def distmatrices2contour(params):
     p = pathlib.Path(dm_npy)
     p = p.with_suffix('.png')
     reconstructed_coords = dist_to_coords(dm)
+    plt.axes().set_aspect('equal')
     plt.scatter(*zip(*reconstructed_coords), s=6)
     plt.savefig(p)
     vprint(2, f'saved {p}')
