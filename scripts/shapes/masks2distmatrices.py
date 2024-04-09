@@ -162,7 +162,7 @@ def masks2distmatrices(params):
 params = types.SimpleNamespace(**{
     "mask_dataset_path": None
   , "output_path": None
-  , "raw_sampling_sparsity": 1
+  , "raw_sampling_sparsity": 4
   , "spline_sampling": 512
 })
 
