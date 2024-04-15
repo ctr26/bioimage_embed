@@ -1,6 +1,11 @@
 from torchvision import datasets, transforms
 import pytorch_lightning as pl
+import pandas as pd
 import numpy as np
+import umap
+import umap.plot
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
 import bioimage_embed
 import bioimage_embed.shapes
 import bioimage_embed.lightning
@@ -130,27 +135,65 @@ def main_process(params):
     # Predict
     ###########################################################################
     predictions = trainer.predict(lit_model, datamodule=dataloader)
+    filenames = [sample[0] for sample in dataloader.get_dataset().samples]
     class_indices = np.array([int(data[-1]) for data in dataloader.predict_dataloader()])
     
     #TODO: Pull the embedings and reconstructed distance matrices
     ###########################################################################
-    vprint(1, f'pull the embedings')
-    # Use the namespace variables
-    latent_space = torch.stack([d.out.z.flatten() for d in predictions])
     # create the output directory
     output_dir = params.output_dir
     if output_dir is None:
       output_dir = f'./{params.model}_{params.latent_dim}_{params.batch_size}_{params.dataset[0]}_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}'
     pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
-    # Save the latent space
-    np.save(f'{output_dir}/latent_space.npy', latent_space)
-    # Save the reconstructions
     for class_label in dataset.classes:
       pathlib.Path(f'{output_dir}/{class_label}').mkdir(parents=True, exist_ok=True)
-    for i, (pred, class_idx) in enumerate(zip(predictions, class_indices)):
+    # Save the latent space
+    vprint(1, f'pull the embedings')
+    latent_space = torch.stack([d.out.z.flatten() for d in predictions]).numpy()
+    np.save(f'{output_dir}/latent_space.npy', latent_space)
+    # Save the (original input and) reconstructions
+    for i, (pred, class_idx, fname) in enumerate(zip(predictions, class_indices, filenames)):
+      vprint(5, f'pred#={i}, class_idx={class_idx}, fname={fname}')
       class_label = dataset.classes[class_idx]
       np.save(f'{output_dir}/{class_label}/original_{i}_{class_label}.npy', pred.x.data[0,0])
       np.save(f'{output_dir}/{class_label}/reconstruction_{i}_{class_label}.npy', pred.out.recon_x[0,0])
+    # umap
+    vprint(4, f'generate umap')
+    umap_model = umap.UMAP(n_neighbors=15, min_dist=0.1, n_components=2, random_state=42)
+    mapper = umap_model.fit(latent_space)
+    umap.plot.points(mapper, labels=np.array([dataset.classes[x] for x in class_indices]))
+    plt.savefig(f'{output_dir}/umap.png')
+
+    # kmean and clustering information
+    # Perform KMeans clustering on the UMAP result
+    vprint(4, f'cluster data with kmean')
+    n_clusters = 4  # Define the number of clusters
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+    umap_result = umap_model.fit_transform(latent_space)
+    cluster_labels = kmeans.fit_predict(umap_result)
+
+    # Concatenate the original data, UMAP result, and cluster labels
+    data_with_clusters = np.column_stack((latent_space, umap_result, cluster_labels))
+
+    # Convert to DataFrame for better handling
+    columns = [f'Feature_{i}' for i in range(latent_space.shape[1])] + \
+              ['UMAP_Dimension_1', 'UMAP_Dimension_2', 'Cluster_Label']
+    df = pd.DataFrame(data_with_clusters, columns=columns)
+    df['fname'] = filenames
+
+    df.to_csv(f'{output_dir}/clustered_data.csv', index=False)
+
+    # Plot the UMAP result with cluster labels
+    plt.figure(figsize=(10, 8))
+    for i in range(n_clusters):
+      plt.scatter(umap_result[cluster_labels == i, 0], umap_result[cluster_labels == i, 1], label=f'Cluster {i+1}', s=5)
+    plt.title('UMAP Visualization of Latent Space with KMeans Clustering')
+    plt.xlabel('UMAP Dimension 1')
+    plt.ylabel('UMAP Dimension 2')
+    plt.legend()
+
+    # Save the figure
+    plt.savefig(f'{output_dir}/umap_with_kmeans_clusters.png')
 
 # default parameters
 ###############################################################################
