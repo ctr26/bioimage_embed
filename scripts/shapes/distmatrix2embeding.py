@@ -17,6 +17,10 @@ import pathlib
 import torch
 import types
 
+# Seed everything
+np.random.seed(42)
+pl.seed_everything(42)
+
 # misc helpers
 ###############################################################################
 
