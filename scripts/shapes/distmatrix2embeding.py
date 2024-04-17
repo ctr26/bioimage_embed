@@ -57,15 +57,17 @@ def main_process(params):
     ###########################################################################
 
     preproc_transform = transforms.Compose([
+        lambda x: x / 256, # scale the matrix to the number of pixels
         #lambda x: x / np.linalg.norm(x, "fro"), # normalize the matrix
-        #lambda x: x*1000, # scale the matrix
-        lambda x: x / x.max(), # normalize each element to one using the max value (0-1)
-        lambda x: x*255, # scale the matrix to 255
+        lambda x: x*100, # scale the matrix
+        #lambda x: x / x.max(), # normalize each element to one using the max value (0-1)
+        #lambda x: x*255, # scale the matrix to 255
         lambda x: maybe_roll(x, p = 1.0), # "potentially" roll the matrix
         sanity_check, # check if the matrix is symmetric and positive, and the diagonal is zero
         torch.as_tensor, # turn (H,W) numpy array into a (H,W) tensor
         lambda x: x.repeat(3, 1, 1) # turn (H,W) tensor into a (3,H,W) tensor (to fit downstream model expectations)
     ])
+
     dataset = datasets.DatasetFolder(params.dataset[1], loader=np.load, extensions=('npy'), transform = preproc_transform)
     #dataset = datasets.DatasetFolder(params.dataset[1], loader=lambda x: np.load(x, allow_pickle=True), extensions=('npy'), transform = preproc_transform)
     dataloader = bioimage_embed.lightning.DataModule(
