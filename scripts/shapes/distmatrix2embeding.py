@@ -118,12 +118,12 @@ def main_process(params):
     
     #TODO: Validate the model
     ########################################################################### 
-    vprint(1, f'TODO: Validate the model')
+    vprint(1, f'Validate the model')
     validation = trainer.validate(lit_model, datamodule=dataloader)
     
     #TODO: Test the model
     ###########################################################################  
-    vprint(1, f'TODO: Test the model')
+    vprint(1, f'Test the model')
     testing = trainer.test(lit_model, datamodule=dataloader)
     
     # Inference on full dataset
