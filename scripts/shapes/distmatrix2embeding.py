@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import umap
 import umap.plot
+import bokeh.plotting
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 import bioimage_embed
@@ -157,6 +158,11 @@ def main_process(params):
     vprint(1, f'pull the embedings')
     latent_space = torch.stack([d.out.z.flatten() for d in predictions]).numpy()
     np.save(f'{output_dir}/latent_space.npy', latent_space)
+    df = pd.DataFrame(latent_space)
+    df['class_idx'] = class_indices
+    df['class'] = [dataset.classes[x] for x in class_indices]
+    df['fname'] = filenames
+    #df.to_pickle(f'{output_dir}/latent_space.pkl')
     # Save the (original input and) reconstructions
     for i, (pred, class_idx, fname) in enumerate(zip(predictions, class_indices, filenames)):
       vprint(5, f'pred#={i}, class_idx={class_idx}, fname={fname}')
@@ -166,9 +172,13 @@ def main_process(params):
     # umap
     vprint(4, f'generate umap')
     umap_model = umap.UMAP(n_neighbors=15, min_dist=0.1, n_components=2, random_state=42)
-    mapper = umap_model.fit(latent_space)
-    umap.plot.points(mapper, labels=np.array([dataset.classes[x] for x in class_indices]))
+    mapper = umap_model.fit(df.drop(['class_idx','class','fname'], axis=1))
+    umap.plot.points(mapper, labels=np.array(df['class']))
     plt.savefig(f'{output_dir}/umap.png')
+    p = umap.plot.interactive(mapper, labels=df['class_idx'], hover_data=df[['class','fname']])
+    # save interactive plot as html
+    bokeh.plotting.output_file(f"{output_dir}/umap.html")
+    bokeh.plotting.save(p)
 
     # kmean and clustering information
     # Perform KMeans clustering on the UMAP result
