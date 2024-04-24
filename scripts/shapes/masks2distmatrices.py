@@ -39,13 +39,18 @@ def rgb2grey(rgb, cr = 0.2989, cg = 0.5870, cb = 0.1140):
 ####### Simplified version in order to make the things properly work #####
 ##########################################################################
 
-def find_longest_contour(mask):
+def find_longest_contour(mask, normalise_coord=False):
     if len(mask.shape) == 3: # (lines, columns, number of channels)
       mask = rgb2grey(mask)
     contours = sk.measure.find_contours(mask, 0.8)
     vprint(4, f'len(contours) {len(contours)}')
     contours = sorted(contours, key=lambda x: len(x), reverse=True)
     x, y = contours[0][:, 0], contours[0][:, 1]
+    if normalise_coord:
+      x = x - np.min(x)
+      x = x / np.max(x)
+      y = y - np.min(y)
+      y = y / np.max(y)
     return x, y
 
 def spline_interpolation(x, y, raw_sampling_sparsity, spline_sampling):
@@ -72,7 +77,7 @@ def dist_to_coords(dst_mat):
 def mask2distmatrix(mask, raw_sampling_sparsity=1, spline_sampling=512):
   vprint(3, f'running with raw_sampling_sparsity {raw_sampling_sparsity} and spline_sampling {spline_sampling}')
   # extract mask contour
-  x, y = find_longest_contour(mask)
+  x, y = find_longest_contour(mask, normalise_coord=True)
   vprint(3, f'found contour shape x {x.shape} y {y.shape}')
   # Reinterpolate (spline)
   x_reinterpolated, y_reinterpolated = spline_interpolation(x, y, raw_sampling_sparsity, spline_sampling)
