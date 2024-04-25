@@ -162,7 +162,7 @@ def main_process(params):
     df['class_idx'] = class_indices
     df['class'] = [dataset.classes[x] for x in class_indices]
     df['fname'] = filenames
-    #df.to_pickle(f'{output_dir}/latent_space.pkl')
+    df.to_pickle(f'{output_dir}/latent_space.pkl')
     # Save the (original input and) reconstructions
     for i, (pred, class_idx, fname) in enumerate(zip(predictions, class_indices, filenames)):
       vprint(5, f'pred#={i}, class_idx={class_idx}, fname={fname}')
@@ -171,11 +171,12 @@ def main_process(params):
       np.save(f'{output_dir}/{class_label}/reconstruction_{i}_{class_label}.npy', pred.out.recon_x[0,0])
     # umap
     vprint(4, f'generate umap')
-    umap_model = umap.UMAP(n_neighbors=15, min_dist=0.1, n_components=2, random_state=42)
+    umap_model = umap.UMAP(n_neighbors=50, min_dist=0.8, n_components=2, random_state=42)
     mapper = umap_model.fit(df.drop(['class_idx','class','fname'], axis=1))
     umap.plot.points(mapper, labels=np.array(df['class']))
     plt.savefig(f'{output_dir}/umap.png')
-    p = umap.plot.interactive(mapper, labels=df['class_idx'], hover_data=df[['class','fname']])
+    #p = umap.plot.interactive(mapper, labels=df['class_idx'], hover_data=df[['class','fname']])
+    p = umap.plot.interactive(mapper, values=df.drop(['class_idx','class','fname'], axis=1).mean(axis=1), theme='viridis', hover_data=df[['class','fname']])
     # save interactive plot as html
     bokeh.plotting.output_file(f"{output_dir}/umap.html")
     bokeh.plotting.save(p)
