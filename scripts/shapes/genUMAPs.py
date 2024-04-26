@@ -40,8 +40,15 @@ def render_umap_core(df, output_dir, n_neighbors, min_dist, n_components):
   mapper = umap_model.fit(df.drop(['class_idx','class','fname'], axis=1))
   umap.plot.points(mapper, labels=np.array(df['class']))
   plt.savefig(f'{output_dir}/{name}.png')
+  theme_values = df.drop(['class_idx','class','fname'], axis=1).mean(axis=1)
+  vprint(5, f'theme_values type: {type(theme_values)}')
+  if True: #temporary condition to work ONLY with the tree dataset
+    theme_values = list(map(lambda x: int(x.split('_')[-1].split('.')[0]), df['fname']))
+    vprint(5, f'new theme_values type: {type(theme_values)}')
+  vprint(5, f'theme_values: {theme_values}')
   #p = umap.plot.interactive(mapper, labels=df['class_idx'], hover_data=df[['class','fname']])
-  p = umap.plot.interactive(mapper, values=df.drop(['class_idx','class','fname'], axis=1).mean(axis=1), theme='viridis', hover_data=df[['class','fname']])
+  #p = umap.plot.interactive(mapper, values=df.drop(['class_idx','class','fname'], axis=1).mean(axis=1), theme='viridis', hover_data=df[['class','fname']])
+  p = umap.plot.interactive(mapper, values=theme_values, theme='viridis', hover_data=df[['class','fname']])
   # save interactive plot as html
   bokeh.plotting.output_file(f"{output_dir}/{name}.html")
   bokeh.plotting.save(p)
@@ -113,6 +120,7 @@ if __name__ == "__main__":
 import sys
 sys.path.insert(1, '{os.path.dirname(__file__)}')
 import genUMAPs
+genUMAPs.vprint.lvl = {clargs.verbose}
 genUMAPs.render_umap('{clargs.latent_space}','{clargs.output_dir}',{n_neighbors},{min_dist},{n_components})
 """]
       vprint(4, cmd)
