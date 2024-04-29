@@ -58,11 +58,9 @@ def main_process(params):
     ###########################################################################
 
     preproc_transform = transforms.Compose([
-        lambda x: x / 256, # scale the matrix to the number of pixels
-        #lambda x: x / np.linalg.norm(x, "fro"), # normalize the matrix
-        lambda x: x*100, # scale the matrix
+        lambda x: x / np.linalg.norm(x, "fro"), # normalize the matrix
+        #lambda x: x*1000, # scale the matrix
         #lambda x: x / x.max(), # normalize each element to one using the max value (0-1)
-        #lambda x: x*255, # scale the matrix to 255
         lambda x: maybe_roll(x, p = 1.0), # "potentially" roll the matrix
         sanity_check, # check if the matrix is symmetric and positive, and the diagonal is zero
         torch.as_tensor, # turn (H,W) numpy array into a (H,W) tensor
@@ -97,6 +95,9 @@ def main_process(params):
     jobname = f"{params.model}_{params.latent_dim}_{params.batch_size}_{params.dataset[0]}"
     wandblogger = pl_loggers.WandbLogger(entity=params.wandb_entity, project=params.wandb_project, name=jobname)
     wandblogger.watch(lit_model, log="all")
+    # TODO: Sanity check:
+    # test_data = dataset[0][0].unsqueeze(0)
+    # test_output = lit_model.forward((test_data,))
 
     # Train the model
     ###########################################################################
@@ -211,6 +212,9 @@ def main_process(params):
 
     # Save the figure
     plt.savefig(f'{output_dir}/umap_with_kmeans_clusters.png')
+    
+    # Test embeding for a classifcation task
+    
 
 # default parameters
 ###############################################################################
