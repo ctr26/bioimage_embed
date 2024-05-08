@@ -97,7 +97,7 @@ def main_process(params):
 
     # WandB logger
     ###########################################################################
-    jobname = f"{params.model}_{params.latent_dim}_{params.batch_size}_{params.dataset[0]}"
+    jobname = f"{params.model}_{'_'.join([f'{k}{v}' for k, v in extra_params.items()])}_{params.latent_dim}_{params.batch_size}_{params.dataset[0]}"
     wandblogger = pl_loggers.WandbLogger(entity=params.wandb_entity, project=params.wandb_project, name=jobname)
     wandblogger.watch(lit_model, log="all")
     # TODO: Sanity check:
