@@ -131,6 +131,19 @@ class ModelFactory:
             bolts.ResNet18VQVAEDecoder,
         )
 
+    def resnet18_beta_vae(self):
+        return self.create_model(
+            partial(
+                pythae.models.BetaVAEConfig,
+                use_default_encoder=False,
+                use_default_decoder=False,
+                **self.kwargs
+            ),
+            pythae.models.BetaVAE,
+            bolts.ResNet18VAEEncoder,
+            bolts.ResNet18VAEDecoder,
+        )
+
     def resnet50_vqvae(self):
         return self.create_model(
             partial(
@@ -195,6 +208,7 @@ class ModelFactory:
 
 __all_models__ = [
     "resnet18_vae",
+    "resnet18_beta_vae",
     "resnet50_vae",
     "resnet18_vae_bolt",
     "resnet50_vae_bolt",

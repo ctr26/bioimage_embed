@@ -17,6 +17,7 @@ import datetime
 import pathlib
 import torch
 import types
+import re
 
 # Seed everything
 np.random.seed(42)
@@ -81,11 +82,15 @@ def main_process(params):
     # Build the model
     ###########################################################################
 
+    extra_params = {}
+    if re.match(".*_beta_vae", params.model):
+      extra_params['beta'] = params.model_beta_vae_beta
     model = bioimage_embed.models.create_model(
         model=params.model,
         input_dim=params.input_dim,
         latent_dim=params.latent_dim,
         pretrained=params.pretrained,
+        **extra_params
     )
     lit_model = bioimage_embed.shapes.MaskEmbed(model, params)
     vprint(1, f'model ready')
@@ -222,6 +227,7 @@ def main_process(params):
 models = [
   "resnet18_vae"
 , "resnet50_vae"
+, "resnet18_beta_vae"
 , "resnet18_vae_bolt"
 , "resnet50_vae_bolt"
 , "resnet18_vqvae"
@@ -250,6 +256,8 @@ params = types.SimpleNamespace(**{
     "decay": 0.99,
     "frobenius_norm": False,
     "dataset": ("tiny_dist", "/nfs/research/uhlmann/afoix/distmat_datasets/tiny_synthcellshapes_dataset_distmat"),
+    # model-specific params
+    "model_beta_vae_beta": 1,
     # optimizer_params
     "opt": "AdamW",
     "lr": 0.001,
@@ -280,6 +288,9 @@ if __name__ == "__main__":
     parser.add_argument(
         '-m', '--model', choices=models, metavar='MODEL'
       , help=f"The MODEL to use, one of {models} (default {params.model}).")
+    parser.add_argument(
+        '--model-beta-vae-beta', type=float, metavar='BETA'
+      , help=f"The BETA parameter to use for a beta-vae model.")
     parser.add_argument(
         '-d', '--dataset', nargs=2, metavar=('NAME', 'PATH')
       , help=f"The NAME of and PATH to the dataset (default: {params.dataset})")
@@ -318,6 +329,8 @@ if __name__ == "__main__":
     # update default params with clargs
     if clargs.model:
       params.model = clargs.model
+    if clargs.model_beta_vae_beta:
+      params.model_beta_vae_beta = clargs.model_beta_vae_beta
     params.output_dir = clargs.output_dir
     if clargs.dataset:
       params.dataset = clargs.dataset
