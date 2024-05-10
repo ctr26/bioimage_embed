@@ -248,9 +248,9 @@ params = types.SimpleNamespace(**{
     "batch_size": 4,
     "num_workers": 2**4,
     "input_dim": (3, 512, 512),
-    "latent_dim": 512,
-    "num_embeddings": 512,
-    "num_hiddens": 512,
+    "latent_dim": 1024,
+    "num_embeddings": 1024,
+    "num_hiddens": 1024,
     "pretrained": True,
     "commitment_cost": 0.25,
     "decay": 0.99,
@@ -310,6 +310,15 @@ if __name__ == "__main__":
         '-l', '--latent-space-size', metavar='LATENT_SPACE_SIZE', type=auto_pos_int
       , help=f"The LATENT_SPACE_SIZE, a positive integer (default {params.latent_dim})")
     parser.add_argument(
+        '--input-dimensions', metavar='INPUT_DIM', nargs=2, type=auto_pos_int
+      , help=f"The width and height INPUT_DIM for the input dimensions (default {params.input_dim[1]} and {params.input_dim[2]})")
+    parser.add_argument(
+        '--number-embeddings', metavar='NUM_EMBEDDINGS', type=auto_pos_int
+      , help=f"The NUM_EMBEDDINGS, a positive integer (default {params.num_embeddings})")
+    parser.add_argument(
+        '--number-hiddens', metavar='NUM_HIDDENS', type=auto_pos_int
+      , help=f"The NUM_HIDDENS, a positive integer (default {params.num_hiddens})")
+    parser.add_argument(
         '-n', '--num-workers', metavar='NUM_WORKERS', type=auto_pos_int
       , help=f"The NUM_WORKERS for the run, a positive integer (default {params.num_workers})")
     parser.add_argument(
@@ -341,11 +350,13 @@ if __name__ == "__main__":
     if clargs.batch_size:
       params.batch_size = clargs.batch_size
     if clargs.latent_space_size:
-      interp_size = clargs.latent_space_size * 2
-      params.input_dim = (params.input_dim[0], interp_size, interp_size)
-      params.latent_dim = interp_size
-      params.num_embeddings = interp_size
-      params.num_hiddens = interp_size
+      params.latent_dim = clargs.latent_space_size
+    if clargs.input_dimensions:
+      params.input_dim = (params.input_dim[0], clargs.input_dimensions[0], clargs.input_dimensions[1])
+    if clargs.number_embeddings:
+      params.num_embeddings = clargs.number_embeddings
+    if clargs.number_hiddens:
+      params.num_hiddens = clargs.number_hiddens
     if clargs.num_workers:
       params.num_workers = clargs.num_workers
     if clargs.num_epochs:
