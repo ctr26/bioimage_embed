@@ -74,6 +74,156 @@ def sanity_check (dist_mat):
     raise ValueError("Matrix has non-zero diagonal")
   return dist_mat
 
+def hashing_fn(args):
+    serialized_args = pickle.dumps(vars(args))
+    hash_object = hashlib.sha256(serialized_args)
+    hashed_string = base64.urlsafe_b64encode(hash_object.digest()).decode()
+    return hashed_string
+
+def scoring_df(X, y):
+    # Split the data into training and test sets
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, shuffle=True, stratify=y
+    )
+    # Define a dictionary of metrics
+    scoring = {
+        "accuracy": make_scorer(metrics.accuracy_score),
+        "precision": make_scorer(metrics.precision_score, average="macro"),
+        "recall": make_scorer(metrics.recall_score, average="macro"),
+        "f1": make_scorer(metrics.f1_score, average="macro"),
+    }
+
+    # Create a random forest classifier
+    pipeline = Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            #  ("pca", PCA(n_components=0.95, whiten=True, random_state=42)),
+            ("clf", RandomForestClassifier()),
+            # ("clf", DummyClassifier()),
+        ]
+    )
+
+    # Specify the number of folds
+    k_folds = 5
+
+    # Perform k-fold cross-validation
+    cv_results = cross_validate(
+        estimator=pipeline,
+        X=X,
+        y=y,
+        cv=KFold(n_splits=k_folds),
+        scoring=scoring,
+        n_jobs=-1,
+        return_train_score=False,
+    )
+
+    # Put the results into a DataFrame
+    return pd.DataFrame(cv_results)
+
+def create_regionprops_df( dataset
+                         , properties = [ "area"
+                                        , "perimeter"
+                                        , "centroid"
+                                        , "major_axis_length"
+                                        , "minor_axis_length"
+                                        , "orientation" ] ):
+    dfs = []
+    # Distance matrix data
+    for i, data in enumerate(tqdm(dataset)):
+        X, y = data
+        # Do regionprops here
+        # Calculate shape summary statistics using regionprops
+        # We're considering that the mask has only one object, so we take the first element [0]
+        # props = regionprops(np.array(X).astype(int))[0]
+        props_table = measure.regionprops_table(
+            np.array(X).astype(int), properties=properties
+        )
+
+        # Store shape properties in a dataframe
+        df = pd.DataFrame(props_table)
+
+        # Assuming the class or label is contained in 'y' variable
+        df["class"] = y
+        df.set_index("class", inplace=True)
+        dfs.append(df)
+
+    return pd.concat(dfs)
+
+def create_efd_df(dataset):
+    dfs = []
+    for i, data in enumerate(tqdm(dataset)):
+        # Convert the tensor to a numpy array
+        X, y = data
+        print(f" The image: {i}")
+
+        # Feed it to PyEFD's calculate_efd function
+        coeffs = pyefd.elliptic_fourier_descriptors(X, order=10, normalize=False)
+        # coeffs_df = pd.DataFrame({'class': [y], 'norm_coeffs': [norm_coeffs.flatten().tolist()]})
+
+        norm_coeffs = pyefd.normalize_efd(coeffs)
+        df = pd.DataFrame(
+            {
+                "norm_coeffs": norm_coeffs.flatten().tolist(),
+                "coeffs": coeffs.flatten().tolist(),
+            }
+        ).T.rename_axis("coeffs")
+        df["class"] = y
+        df.set_index("class", inplace=True, append=True)
+        dfs.append(df)
+
+    return pd.concat(dfs)
+
+def run_trials( trials, outputdir
+              , logger = logging.getLogger(__name__)
+              , width = 3.45
+              , height = 3.45 / 1.618 ):
+    trial_df = pd.DataFrame()
+    for trial in trials:
+        X = trial["features"]
+        y = trial["labels"]
+        trial["score_df"] = scoring_df(X, y)
+        trial["score_df"]["trial"] = trial["name"]
+        logger.info(trial["score_df"])
+        trial["score_df"].to_csv(f"{outputdir}/{trial['name']}_score_df.csv")
+        trial_df = pd.concat([trial_df, trial["score_df"]])
+    trial_df = trial_df.drop(["fit_time", "score_time"], axis=1)
+
+    trial_df.to_csv(f"{outputdir}/trial_df.csv")
+    trial_df.groupby("trial").mean().to_csv(f"{outputdir}/trial_df_mean.csv")
+    trial_df.plot(kind="bar")
+
+    avg = trial_df.groupby("trial").mean()
+    logger.info(avg)
+    avg.to_latex(f"{outputdir}/trial_df.tex")
+
+    melted_df = trial_df.melt(id_vars="trial", var_name="Metric", value_name="Score")
+    # fig, ax = plt.subplots(figsize=(width, height))
+    ax = sns.catplot(
+        data=melted_df,
+        kind="bar",
+        x="trial",
+        hue="Metric",
+        y="Score",
+        errorbar="se",
+        height=height,
+        aspect=width * 2**0.5 / height,
+    )
+    # ax.xtick_params(labelrotation=45)
+    # plt.legend(loc='lower center', bbox_to_anchor=(1, 1))
+    # sns.move_legend(ax, "lower center", bbox_to_anchor=(1, 1))
+    # ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    # plt.tight_layout()
+    plt.savefig(f"{outputdir}/trials_barplot.pdf")
+    plt.close()
+
+    avs = (
+        melted_df.set_index(["trial", "Metric"])
+        .xs("test_f1", level="Metric", drop_level=False)
+        .groupby("trial")
+        .mean()
+    )
+    logger.info(avs)
+
 # Main process
 ###############################################################################
 
@@ -219,12 +369,60 @@ def main_process(params):
     # Save the latent space
     vprint(1, f'pull the embedings')
     latent_space = torch.stack([d.out.z.flatten() for d in predictions]).numpy()
+    scalings = torch.stack([d.x.scalings.flatten() for d in predictions])
+    
     np.save(f'{output_dir}/latent_space.npy', latent_space)
     df = pd.DataFrame(latent_space)
     df['class_idx'] = class_indices
-    df['class'] = [dataset.classes[x] for x in class_indices]
+    #df['class'] = [dataset.classes[x] for x in class_indices]
+    df['class'] = pd.Series([dataset.classes[x] for x in class_indices]).astype("category")
     df['fname'] = filenames
+    #df['scale'] = scalings[:,0].squeeze()
     df.to_pickle(f'{output_dir}/latent_space.pkl')
+
+    df_shape_embed = df.drop('fname', axis=1).copy()
+    df_shape_embed = df_shape_embed.set_index('class')
+    #regionprop_dataset = datasets.ImageFolder('/nfs/research/uhlmann/afoix/image_datasets/tiny_broken_synthetic_shapes/', transform=transforms.Compose([
+    regionprop_dataset = datasets.ImageFolder('/nfs/research/uhlmann/afoix/image_datasets/synthetic_shapes/', transform=transforms.Compose([
+        transforms.Grayscale(1)
+      #, CropCentroidPipeline(128 * 2)
+    ]))
+    df_regionprops = create_regionprops_df(regionprop_dataset)
+    #efd_dataset = datasets.ImageFolder('/nfs/research/uhlmann/afoix/image_datasets/tiny_broken_synthetic_shapes/', transform=transforms.Compose([
+    efd_dataset = datasets.ImageFolder('/nfs/research/uhlmann/afoix/image_datasets/synthetic_shapes/', transform=transforms.Compose([
+        transforms.Grayscale(1)
+      #, CropCentroidPipeline(128 * 2)
+      , ImageToCoords(128 * 2)
+    ]))
+    print(efd_dataset)
+    df_efd = create_efd_df(efd_dataset)
+
+    # setup trials
+    trials = [
+      {
+          "name": "mask_embed",
+          "features": df_shape_embed.to_numpy(),
+          "labels": df_shape_embed.index,
+      },
+      {
+          "name": "fourier_coeffs",
+          "features": df_efd.xs("coeffs", level="coeffs"),
+          "labels": df_efd.xs("coeffs", level="coeffs").index,
+      },
+      # {"name": "fourier_norm_coeffs",
+      #  "features": df_efd.xs("norm_coeffs", level="coeffs"),
+      #  "labels": df_efd.xs("norm_coeffs", level="coeffs").index
+      # }
+      {
+          "name": "regionprops",
+          "features": df_regionprops,
+          "labels": df_regionprops.index,
+      }
+    ]
+
+    run_trials(trials, output_dir)
+
+    
     # Save the (original input and) reconstructions
     for i, (pred, class_idx, fname) in enumerate(zip(predictions, class_indices, filenames)):
       vprint(5, f'pred#={i}, class_idx={class_idx}, fname={fname}')
@@ -419,5 +617,6 @@ if __name__ == "__main__":
     if clargs.num_epochs:
       params.epochs = clargs.num_epochs
     
+    logging.basicConfig(level=logging.INFO)
     # run main process
     main_process(params)
