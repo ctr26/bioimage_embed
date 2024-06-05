@@ -241,6 +241,7 @@ models = [
 , "resnet50_vae_legacy"
 ]
 
+matrix_dim = 512
 params = types.SimpleNamespace(**{
     # general params
     "model": "resnet18_vae",
@@ -248,7 +249,7 @@ params = types.SimpleNamespace(**{
     "batch_size": 4,
     "num_workers": 2**4,
     "input_dim": (3, 512, 512),
-    "latent_dim": 1024,
+    "latent_dim": int((matrix_dim**2 - matrix_dim) / 2),
     "num_embeddings": 1024,
     "num_hiddens": 1024,
     "pretrained": True,
