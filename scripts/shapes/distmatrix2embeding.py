@@ -118,7 +118,15 @@ def main_process(params):
     )
     lit_model = bioimage_embed.shapes.MaskEmbed(model, params)
     vprint(1, f'model ready')
-
+    
+    model_dir = f"checkpoints/{hashing_fn(params)}"
+    
+    
+    if clargs.clear_checkpoints:
+        print("cleaning checkpoints")
+        shutil.rmtree("checkpoints/")
+        model_dir = f"checkpoints/{hashing_fn(params)}"
+    
     # WandB logger
     ###########################################################################
     jobname = f"{params.model}_{'_'.join([f'{k}{v}' for k, v in extra_params.items()])}_{params.latent_dim}_{params.batch_size}_{params.dataset[0]}"
@@ -131,21 +139,45 @@ def main_process(params):
     # Train the model
     ###########################################################################
     
+    Path(f"{model_dir}/").mkdir(parents=True, exist_ok=True)
+    
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=f"{model_dir}/",
+        save_last=True,
+        save_top_k=1,
+        monitor="loss/val",
+        mode="min",
+    )
+    
     trainer = pl.Trainer(
         logger=[wandblogger],
         gradient_clip_val=0.5,
-        enable_checkpointing=False,
+        enable_checkpointing=True,
         devices=1,
         accelerator="gpu",
         accumulate_grad_batches=4,
-        #TODO callbacks=[checkpoint_callback],
+        callbacks=[checkpoint_callback],
         min_epochs=50,
         max_epochs=params.epochs,
         log_every_n_steps=1,
     )
+    
+     # Determine the checkpoint path for resuming
+    last_checkpoint_path = f"{model_dir}/last.ckpt"
+    best_checkpoint_path = checkpoint_callback.best_model_path
+    
+    # Check if a last checkpoint exists to resume from
+    if os.path.isfile(last_checkpoint_path):
+        resume_checkpoint = last_checkpoint_path
+    elif best_checkpoint_path and os.path.isfile(best_checkpoint_path):
+        resume_checkpoint = best_checkpoint_path
+    else:
+        resume_checkpoint = None
+    
     trainer.fit(lit_model, datamodule=dataloader)
     lit_model.eval()
     vprint(1, f'trainer fitted')
+    
     
     #TODO: Validate the model
     ########################################################################### 
@@ -349,8 +381,8 @@ if __name__ == "__main__":
     parser.add_argument(
         '-e', '--num-epochs', metavar='NUM_EPOCHS', type=auto_pos_int
       , help=f"The NUM_EPOCHS for the run, a positive integer (default {params.epochs})")
-    #parser.add_argument('--clear-checkpoints', action='store_true'
-    #  , help='remove checkpoints')
+    parser.add_argument('--clear-checkpoints', action='store_true'
+      , help='remove checkpoints')
     parser.add_argument('-v', '--verbose', action='count', default=0
       , help="Increase verbosity level by adding more \"v\".")
     
