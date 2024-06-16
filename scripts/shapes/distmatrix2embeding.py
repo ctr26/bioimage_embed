@@ -383,14 +383,14 @@ def main_process(params):
 
     df_shape_embed = df.drop('fname', axis=1).copy()
     df_shape_embed = df_shape_embed.set_index('class')
-    #regionprop_dataset = datasets.ImageFolder('/nfs/research/uhlmann/afoix/image_datasets/tiny_broken_synthetic_shapes/', transform=transforms.Compose([
-    regionprop_dataset = datasets.ImageFolder('/nfs/research/uhlmann/afoix/image_datasets/synthetic_shapes/', transform=transforms.Compose([
+    regionprop_dataset = datasets.ImageFolder('/nfs/research/uhlmann/afoix/image_datasets/tiny_broken_synthetic_shapes/', transform=transforms.Compose([
+    #regionprop_dataset = datasets.ImageFolder('/nfs/research/uhlmann/afoix/image_datasets/synthetic_shapes/', transform=transforms.Compose([
         transforms.Grayscale(1)
       #, CropCentroidPipeline(128 * 2)
     ]))
     df_regionprops = create_regionprops_df(regionprop_dataset)
-    #efd_dataset = datasets.ImageFolder('/nfs/research/uhlmann/afoix/image_datasets/tiny_broken_synthetic_shapes/', transform=transforms.Compose([
-    efd_dataset = datasets.ImageFolder('/nfs/research/uhlmann/afoix/image_datasets/synthetic_shapes/', transform=transforms.Compose([
+    efd_dataset = datasets.ImageFolder('/nfs/research/uhlmann/afoix/image_datasets/tiny_broken_synthetic_shapes/', transform=transforms.Compose([
+    #efd_dataset = datasets.ImageFolder('/nfs/research/uhlmann/afoix/image_datasets/synthetic_shapes/', transform=transforms.Compose([
         transforms.Grayscale(1)
       #, CropCentroidPipeline(128 * 2)
       , ImageToCoords(128 * 2)
@@ -496,7 +496,8 @@ models = [
 , "resnet50_vae_legacy"
 ]
 
-matrix_dim = 512
+#matrix_dim = 512
+matrix_dim = 4
 n = 2
 params = types.SimpleNamespace(**{
     # general params
