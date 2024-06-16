@@ -87,10 +87,11 @@ def scoring_df(X, y):
     )
     # Define a dictionary of metrics
     scoring = {
-        "accuracy": make_scorer(metrics.accuracy_score),
+        "accuracy": make_scorer(metrics.balanced_accuracy_score),
         "precision": make_scorer(metrics.precision_score, average="macro"),
         "recall": make_scorer(metrics.recall_score, average="macro"),
         "f1": make_scorer(metrics.f1_score, average="macro"),
+        #"roc_auc": make_scorer(metrics.roc_auc_score, average="macro")
     }
 
     # Create a random forest classifier
@@ -111,7 +112,7 @@ def scoring_df(X, y):
         estimator=pipeline,
         X=X,
         y=y,
-        cv=KFold(n_splits=k_folds),
+        cv=StratifiedKFold(n_splits=k_folds),
         scoring=scoring,
         n_jobs=-1,
         return_train_score=False,
