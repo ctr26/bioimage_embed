@@ -1,16 +1,5 @@
 #! /usr/bin/env python3
 
-# general utils
-import os
-import re
-import copy
-import types
-import pickle
-import base64
-import hashlib
-import logging
-import functools
-
 # machine learning utils
 import torch
 from torchvision import datasets, transforms
@@ -18,6 +7,21 @@ import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
+from sklearn.cluster import KMeans
+from sklearn.metrics import confusion_matrix, accuracy_score
+
+# general utils
+import os
+import re
+import copy
+import types
+import pickle
+import base64
+import pandas
+import hashlib
+import logging
+import datetime
+import functools
 
 # own source files
 import bioimage_embed
@@ -69,7 +73,7 @@ dflt_params = types.SimpleNamespace(
 , matrix_size=512
 , num_embeddings=1024
 , num_hiddens=1024
-, num_workers=16
+, num_workers=8
 , epochs=150
 , pretrained=False
 , frobenius_norm=False
@@ -244,22 +248,98 @@ def test_model(trainer, model, dataloader):
   testing = trainer.test(model, datamodule=dataloader)
   return testing
 
+def run_predictions(trainer, model, dataloader, num_workers=8):
+
+  # prepare new unshuffled datamodule
+  datamod = bioimage_embed.lightning.DataModule(
+    dataloader.dataset
+  , batch_size=1
+  , shuffle=False
+  , num_workers=num_workers
+  )
+  datamod.setup()
+
+  # run predictions
+  predictions = trainer.predict(model, datamodule=datamod)
+
+  # extract latent space
+  latent_space = torch.stack([d.out.z.flatten() for d in predictions]).numpy()
+
+  # extract class indices and filenames and provide a richer pandas dataframe
+  ds = datamod.get_dataset()
+  class_indices = np.array([ int(lbl)
+                             for _, lbl in datamod.predict_dataloader() ])
+  fnames = [fname for fname, _ in ds.samples]
+  df = pandas.DataFrame(latent_space)
+  df['class_idx'] = class_indices
+  #df['class'] = [ds.classes[x] for x in class_indices]
+  df['class'] = pandas.Series([ ds.classes[x]
+                                for x in class_indices]).astype("category")
+  df['fname'] = fnames
+  #df['scale'] = scalings[:,0].squeeze()
+
+  return (predictions, latent_space, df)
+
+def dataloader_to_dataframe(dataloader):
+  # gather the data and the associated labels, and drop rows with NaNs
+  all_data = []
+  all_lbls = []
+  for batch in dataloader:
+    inputs, lbls = batch
+    for data, lbl in zip(inputs, lbls):
+      all_data.append(data.flatten().numpy())
+      all_lbls.append(int(lbl))
+  df = pandas.DataFrame(all_data)
+  df['label'] = all_lbls
+  df.dropna()
+  return df
+
+def run_kmeans(dataframe, random_seed=42):
+  # run KMeans and derive accuracy metric and confusion matrix
+  kmeans = KMeans( n_clusters=len(dataframe['label'].unique())
+                 , random_state=random_seed
+                 ).fit(dataframe.drop('label', axis=1))
+  accuracy = accuracy_score(dataframe['label'], kmeans.labels_)
+  conf_mat = confusion_matrix(dataframe['label'], kmeans.labels_)
+
+  return kmeans, accuracy, conf_mat
+
 # main process
 ###############################################################################
 
 def main_process(params):
 
   # setup
+  #######
   model = get_model(params)
   trainer = get_trainer(model, params)
   dataloader = get_dataloader(params)
 
   # run actual work
+  #################
   train_model(trainer, model, dataloader)
   validate_model(trainer, model, dataloader)
   test_model(trainer, model, dataloader)
 
-  # gather results
+  # run predictions
+  #################
+  # ... and gather latent space
+  predictions, latent_space, df = run_predictions(
+    trainer, model, dataloader
+  , num_workers=params.num_workers
+  )
+  # ... and prepare output directory and save latent space
+  os.makedirs(f"{params.output_dir}/", exist_ok=True)
+  np.save(f'{params.output_dir}/latent_space.npy', latent_space)
+  df.to_pickle(f'{params.output_dir}/latent_space.pkl')
+
+  # gather metrics
+  ################
+  # kmeans on input data
+  _, accuracy, conf_mat = run_kmeans(dataloader_to_dataframe(dataloader.predict_dataloader()))
+  logger.info(f'-- kmeans on input data --')
+  logger.info(f'-- accuracy: {accuracy}')
+  logger.info(f'-- confusion matrix:\n{conf_mat}')
 
 # main entry point
 ###############################################################################
@@ -321,10 +401,10 @@ if __name__ == '__main__':
   
   # set verbosity level
   if clargs.verbose > 0:
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
   
-  params = copy.deepcopy(dflt_params)
   # update default params with clargs
+  params = copy.deepcopy(dflt_params)
   if clargs.model:
     params.model = clargs.model
   params.model_args = types.SimpleNamespace()
@@ -354,5 +434,12 @@ if __name__ == '__main__':
     params.num_workers = clargs.num_workers
   if clargs.num_epochs:
     params.epochs = clargs.num_epochs
+  if clargs.output_dir:
+    params.output_dir = clargs.output_dir
+  else:
+    params.output_dir = f'./{params.model_name}_{params.latent_dim}_{params.batch_size}_{params.dataset.name}_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}'
   
+  # XXX
+  torch.set_float32_matmul_precision('medium')
+  # XXX
   main_process(params)
