@@ -10,6 +10,8 @@ from torch import nn
 from torch.nn import functional as F
 from torch import Tensor
 from typing import List
+
+
 # from .convnet import CovNetEncoder, CovNetDecoder
 class VAE(nn.Module):
     def __init__(
@@ -18,7 +20,7 @@ class VAE(nn.Module):
         latent_dim: int,
         hidden_dims: List = None,
         image_dims=(64, 64),
-        **kwargs
+        **kwargs,
     ) -> None:
         super(VAE, self).__init__()
 
@@ -95,14 +97,17 @@ class VAE(nn.Module):
             nn.BatchNorm2d(hidden_dims[-1]),
             nn.LeakyReLU(),
             nn.Conv2d(
-                hidden_dims[-1], out_channels=self.channels, kernel_size=3, padding=1
+                hidden_dims[-1],
+                out_channels=self.channels,
+                kernel_size=3,
+                padding=1,
             ),
             nn.Tanh(),
         )
-        
+
     def update(self):
         pass
-    
+
     def encode(self, input: Tensor) -> List[Tensor]:
         """
         Encodes the input by passing through the encoder network
@@ -176,7 +181,8 @@ class VAE(nn.Module):
         recons_loss = F.mse_loss(recons, input)
 
         kld_loss = torch.mean(
-            -0.5 * torch.sum(1 + log_var - mu**2 - log_var.exp(), dim=1), dim=0
+            -0.5 * torch.sum(1 + log_var - mu**2 - log_var.exp(), dim=1),
+            dim=0,
         )
 
         loss = recons_loss + kld_weight * kld_loss

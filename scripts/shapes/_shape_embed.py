@@ -6,8 +6,6 @@ from sklearn.model_selection import cross_validate, KFold, train_test_split
 from sklearn.metrics import make_scorer
 import pandas as pd
 from sklearn import metrics
-import matplotlib as mpl
-import seaborn as sns
 from pathlib import Path
 import umap
 from torch.autograd import Variable
@@ -44,11 +42,6 @@ from bioimage_embed.shapes.transforms import (
 
 import matplotlib.pyplot as plt
 
-from bioimage_embed.lightning import DataModule
-import matplotlib as mpl
-from matplotlib import rc
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +88,11 @@ def shape_embed_process():
     height = width / 1.618
     plt.rcParams["figure.figsize"] = [width, height]
 
-    sns.set(style="white", context="notebook", rc={"figure.figsize": (width, height)})
+    sns.set(
+        style="white",
+        context="notebook",
+        rc={"figure.figsize": (width, height)},
+    )
 
     # matplotlib.use("TkAgg")
     interp_size = 128 * 2
@@ -225,7 +222,7 @@ def shape_embed_process():
     plt.scatter(*coords, c=np.arange(interp_size), cmap="rainbow", s=2)
 
     # Save the plot as an image without border and coordinate axes
-    plt.savefig(metadata(f"transform_coords.png"), bbox_inches="tight", pad_inches=0)
+    plt.savefig(metadata("transform_coords.png"), bbox_inches="tight", pad_inches=0)
 
     # Close the plot
     plt.close()
@@ -277,9 +274,10 @@ def shape_embed_process():
     model_dir = f"my_models/{dataset_path}_{model._get_name()}_{lit_model._get_name()}"
     Path(f"{model_dir}/").mkdir(parents=True, exist_ok=True)
 
-    tb_logger = pl_loggers.TensorBoardLogger(f"logs/",
-                                             name=f"{dataset_path}_{args.model}_{model._get_name()}_{lit_model._get_name()}",
-                                             )
+    tb_logger = pl_loggers.TensorBoardLogger(
+        "logs/",
+        name=f"{dataset_path}_{args.model}_{model._get_name()}_{lit_model._get_name()}",
+    )
 
     checkpoint_callback = ModelCheckpoint(dirpath=f"{model_dir}/", save_last=True)
 
@@ -392,7 +390,7 @@ def shape_embed_process():
     sns.despine(left=True, bottom=True)
     plt.tick_params(bottom=False, left=False, labelbottom=False, labelleft=False)
     plt.tight_layout()
-    plt.savefig(metadata(f"umap_no_axes.pdf"))
+    plt.savefig(metadata("umap_no_axes.pdf"))
     # plt.show()
     plt.close()
 
@@ -486,8 +484,8 @@ def shape_embed_process():
         trial_df = pd.concat([trial_df, trial["score_df"]])
     trial_df = trial_df.drop(["fit_time", "score_time"], axis=1)
 
-    trial_df.to_csv(metadata(f"trial_df.csv"))
-    trial_df.groupby("trial").mean().to_csv(metadata(f"trial_df_mean.csv"))
+    trial_df.to_csv(metadata("trial_df.csv"))
+    trial_df.groupby("trial").mean().to_csv(metadata("trial_df_mean.csv"))
     trial_df.plot(kind="bar")
 
     melted_df = trial_df.melt(id_vars="trial", var_name="Metric", value_name="Score")
@@ -507,7 +505,7 @@ def shape_embed_process():
     # sns.move_legend(ax, "lower center", bbox_to_anchor=(1, 1))
     # ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     # plt.tight_layout()
-    plt.savefig(metadata(f"trials_barplot.pdf"))
+    plt.savefig(metadata("trials_barplot.pdf"))
     plt.close()
 
     avs = (

@@ -1,4 +1,6 @@
 import torch
+
+
 def mds(d):
     """
     Multidimensional Scaling (MDS) in PyTorch.

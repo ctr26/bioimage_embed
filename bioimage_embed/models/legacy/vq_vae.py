@@ -39,7 +39,9 @@ class VectorQuantizer(nn.Module):
         # Encoding
         encoding_indices = torch.argmin(distances, dim=1).unsqueeze(1)
         encodings = torch.zeros(
-            encoding_indices.shape[0], self._num_embeddings, device=inputs.device
+            encoding_indices.shape[0],
+            self._num_embeddings,
+            device=inputs.device,
         )
         encodings.scatter_(1, encoding_indices, 1)
 
@@ -56,12 +58,22 @@ class VectorQuantizer(nn.Module):
         perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
 
         # convert quantized from BHWC -> BCHW
-        return loss, quantized.permute(0, 3, 1, 2).contiguous(), perplexity, encodings
+        return (
+            loss,
+            quantized.permute(0, 3, 1, 2).contiguous(),
+            perplexity,
+            encodings,
+        )
 
 
 class VectorQuantizerEMA(nn.Module):
     def __init__(
-        self, num_embeddings, embedding_dim, commitment_cost, decay, epsilon=1e-5
+        self,
+        num_embeddings,
+        embedding_dim,
+        commitment_cost,
+        decay,
+        epsilon=1e-5,
     ):
         super(VectorQuantizerEMA, self).__init__()
 
@@ -97,7 +109,9 @@ class VectorQuantizerEMA(nn.Module):
         # Encoding
         encoding_indices = torch.argmin(distances, dim=1).unsqueeze(1)
         encodings = torch.zeros(
-            encoding_indices.shape[0], self._num_embeddings, device=inputs.device
+            encoding_indices.shape[0],
+            self._num_embeddings,
+            device=inputs.device,
         )
         encodings.scatter_(1, encoding_indices, 1)
 
@@ -137,7 +151,13 @@ class VectorQuantizerEMA(nn.Module):
         perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
 
         # convert quantized from BHWC -> BCHW
-        return loss, quantized.permute(0, 3, 1, 2).contiguous(), perplexity, encodings
+        return (
+            loss,
+            quantized.permute(0, 3, 1, 2).contiguous(),
+            perplexity,
+            encodings,
+        )
+
 
 class VQ_VAE(nn.Module):
     def __init__(
@@ -150,15 +170,21 @@ class VQ_VAE(nn.Module):
         commitment_cost=0.25,
         decay=0.99,
         channels=1,
-        **kwargs
+        **kwargs,
     ):
         super(VQ_VAE, self).__init__()
 
         self._encoder = ResnetEncoder(
-            num_hiddens, num_residual_layers, num_residual_hiddens, in_channels=channels
+            num_hiddens,
+            num_residual_layers,
+            num_residual_hiddens,
+            in_channels=channels,
         )
         self._pre_vq_conv = nn.Conv2d(
-            in_channels=num_hiddens, out_channels=embedding_dim, kernel_size=1, stride=1
+            in_channels=num_hiddens,
+            out_channels=embedding_dim,
+            kernel_size=1,
+            stride=1,
         )
         if decay > 0.0:
             self._vq_vae = VectorQuantizerEMA(
@@ -175,6 +201,7 @@ class VQ_VAE(nn.Module):
             num_residual_hiddens,
             out_channels=channels,
         )
+
     def forward(self, x):
         z = self.encoder(x)
         z = self._pre_vq_conv(z)
@@ -247,7 +274,11 @@ class VQ_VAE(nn.Module):
         recons_loss = F.mse_loss(recons, input)
 
         loss = recons_loss + vq_loss
-        return {"loss": loss, "Reconstruction_Loss": recons_loss, "VQ_Loss": vq_loss}
+        return {
+            "loss": loss,
+            "Reconstruction_Loss": recons_loss,
+            "VQ_Loss": vq_loss,
+        }
 
         # vq_loss, output, perplexity = self.forward(inputs)
         # output = x_recon
@@ -258,7 +289,6 @@ class VQ_VAE(nn.Module):
         # recon_error = self.loss_fn(output, inputs)
 
     def vqvae_to_latent(self, img: torch.Tensor) -> torch.Tensor:
-
         vq = self._vq_vae
         embedding_torch = vq._embedding
         embedding_in = self.encoder_z(img)

@@ -36,7 +36,9 @@ class LitAutoEncoderPyro(pl.LightningModule):
             "input", torchvision.utils.make_grid(inputs), batch_idx
         )
         self.logger.experiment.add_image(
-            "output", torchvision.utils.make_grid(torch.sigmoid(output)), batch_idx
+            "output",
+            torchvision.utils.make_grid(torch.sigmoid(output)),
+            batch_idx,
         )
 
     def pyro_training_step(self, train_batch, batch_idx):
@@ -49,7 +51,9 @@ class LitAutoEncoderPyro(pl.LightningModule):
             "input", torchvision.utils.make_grid(inputs), batch_idx
         )
         self.logger.experiment.add_image(
-            "output", torchvision.utils.make_grid(torch.sigmoid(output)), batch_idx
+            "output",
+            torchvision.utils.make_grid(torch.sigmoid(output)),
+            batch_idx,
         )
         return loss
 

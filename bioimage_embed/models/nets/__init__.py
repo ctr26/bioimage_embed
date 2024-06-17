@@ -14,6 +14,7 @@ RESNETS = {
     f"resnet{k}": {
         "depth": v,
         "encoder": partial(ResnetEncoder, num_residual_layers=k),
-        "decoder": partial(ResnetDecoder, num_residual_layers=k)
-    } for k, v in RESNETS_DEPTHS.items()
+        "decoder": partial(ResnetDecoder, num_residual_layers=k),
+    }
+    for k, v in RESNETS_DEPTHS.items()
 }

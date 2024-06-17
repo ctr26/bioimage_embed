@@ -16,7 +16,7 @@ import os
 # HTTP.remote("mefs.tar.gz", keep_local=True)
 # breakpoint()
 
-# 
+#
 def split_masks_pil(input_file, output_dir):
     input_path = Path(input_file)
     output_dir = Path(output_dir)
@@ -138,4 +138,3 @@ checkpoint collate_split_masks:
         image="torchvision/Control/{mask_file}_{label}.png",
     shell:
         "cp {input.image} {output.image}"
-

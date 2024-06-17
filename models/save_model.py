@@ -1,23 +1,22 @@
 """
 train.py is entrypoint for docker container.
 """
+
 import logging
 import argparse
-import hypertune
 from torchvision import transforms
-from google.cloud import aiplatform
 from google.cloud import storage
-import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import (
     ModelCheckpoint,
-    LearningRateMonitor,
     EarlyStopping,
 )
-from bioimage_embed_training.bioimage_embed.lightning.dataloader import DatamoduleGlob
 from bioimage_embed_training.bioimage_embed.models import BioimageEmbed
-from bioimage_embed_training.bioimage_embed.lightning.torch import LitAutoEncoderTorch
+from bioimage_embed_training.bioimage_embed.lightning.torch import (
+    LitAutoEncoderTorch,
+)
 import json
+
 # Taking configurations from python file:
 logging.basicConfig(level=logging.INFO)
 logging.info("Picking up config file from storage bucket")
@@ -30,14 +29,14 @@ with open("cfg.py", "wb") as f:
 import cfg
 
 # Initailizing parameters
-PROJECT_ID = 'prj-ext-dev-mlops-bia-363210'
-LOCATION = 'europe-west2'
-SERIES = '01'
-EXPERIMENT = 'exp-dummy'
-FRAMEWORK = 'pytorch-lightning'
-TASK = 'compress-image'
-MODEL_TYPE = 'vq-vae'
-RUN_NAME = 'run-dummy'
+PROJECT_ID = "prj-ext-dev-mlops-bia-363210"
+LOCATION = "europe-west2"
+SERIES = "01"
+EXPERIMENT = "exp-dummy"
+FRAMEWORK = "pytorch-lightning"
+TASK = "compress-image"
+MODEL_TYPE = "vq-vae"
+RUN_NAME = "run-dummy"
 num_residual_hiddens = 8
 num_residual_layers = 2
 embedding_dim = 64
@@ -61,13 +60,13 @@ if cfg.mode == "hpt":
         help="Learning Rate",
     )
     parser.add_argument(
-        "--batch_size", 
-        dest="batch_size", 
-        required=True, 
-        type=int, 
-        help="batch_size"
+        "--batch_size",
+        dest="batch_size",
+        required=True,
+        type=int,
+        help="batch_size",
     )
-    
+
 
 elif cfg.mode == "scale":
     logging.info(f"Mode of the job is {cfg.mode}")
@@ -82,9 +81,9 @@ decay = 0.99
 num_workers = 16
 data_samples = 100
 
-model_name = 'VQ_VAE'
-dataset = 'idr0093-mueller-perturbation'
-data_dir = 'ebi-bia'
+model_name = "VQ_VAE"
+dataset = "idr0093-mueller-perturbation"
+data_dir = "ebi-bia"
 train_dataset_glob = {"dataset": dataset, "data_dir": data_dir}
 pin_memory = True
 model_dir = f"models/{model_name}_{SERIES}"
@@ -92,7 +91,7 @@ model_dir = f"models/{model_name}_{SERIES}"
 import torch
 from PIL import Image
 
-test_img = Image.new('RGB', (1024, 1024))
+test_img = Image.new("RGB", (1024, 1024))
 transform = transforms.Compose(
     [
         transforms.Grayscale(),
@@ -110,7 +109,6 @@ transform = transforms.Compose(
 test_tensor = transform(test_img).unsqueeze(0)
 # try:
 if cfg.mode == "hpt":
-    
     # dataloader = DatamoduleGlob(
     #     train_dataset_glob,
     #     batch_size=args.batch_size,
@@ -137,7 +135,6 @@ if cfg.mode == "hpt":
     )
 
 elif cfg.mode == "scale":
-    
     # dataloader = DatamoduleGlob(
     #     train_dataset_glob,
     #     batch_size=batch_size,
@@ -170,10 +167,7 @@ logger_version = cfg.tb_logger
 # logging.info(f"logging_path : {gs_path}{cfg.CUSTOM_JOB_NAME}/{logger_version}")
 
 tb_logger = pl_loggers.TensorBoardLogger(
-    gs_path, 
-    log_graph=True, 
-    version=logger_version, 
-    name=cfg.CUSTOM_JOB_NAME
+    gs_path, log_graph=True, version=logger_version, name=cfg.CUSTOM_JOB_NAME
 )
 
 # Enabling Earlystopping and ModelCheckpoint
@@ -215,14 +209,14 @@ import torch.jit as jit
 traced_model = jit.trace(model, test_tensor)
 
 # Save the traced model to a file
-script_path = 'model.pt'
+script_path = "model.pt"
 torch.jit.save(traced_model, script_path)
 
 
 try:
     trainer.fit(lit_model, datamodule=dataloader)
     # ckpt_path=f"gs://q_vertex_ai_dev/{model_dir}/custom_job/last.ckpt")
-    Logged_Metrics = trainer.logged_metrics  
+    Logged_Metrics = trainer.logged_metrics
     Callback_Metrics = trainer.callback_metrics
 except:
     trainer.fit(lit_model, datamodule=dataloader)
@@ -233,7 +227,7 @@ except:
 logging.info(f"Logged metrics: {Logged_Metrics}")
 logging.info(f"Callback metrics: {Callback_Metrics}")
 log_metric_loss = float(Callback_Metrics["train_loss"].numpy())
-ssim_metric = float(Callback_Metrics['train_ssim_score'].numpy())
+ssim_metric = float(Callback_Metrics["train_ssim_score"].numpy())
 
 logging.info(f"log_metric_loss: {log_metric_loss}")
 logging.info(f"ssim_metric: {ssim_metric}")
@@ -243,21 +237,21 @@ if cfg.mode == "hpt":
     hpt.report_hyperparameter_tuning_metric(
         hyperparameter_metric_tag="train_loss", metric_value=log_metric_loss
     )
-    file_path = f'{model_dir}/{args.time_stamp}_custom_job/{cfg.CUSTOM_JOB_NAME}/loss_metric.txt'
-    file_name = file_path.split('/')[-1]
-    loss = {'ssim_score':ssim_metric}
+    file_path = f"{model_dir}/{args.time_stamp}_custom_job/{cfg.CUSTOM_JOB_NAME}/loss_metric.txt"
+    file_name = file_path.split("/")[-1]
+    loss = {"ssim_score": ssim_metric}
     logging.info(f"Metric returned to file: gs://q_vertex_ai_dev/{file_path}")
     blob = bucket.blob(file_path)
-    blob.upload_from_string(data=json.dumps(loss), content_type='application/json')
+    blob.upload_from_string(data=json.dumps(loss), content_type="application/json")
     logging.info(f"Metric is saved: {file_name}")
 
 elif cfg.mode == "scale":
-    file_path = f'{model_dir}/{args.time_stamp}_custom_job/{cfg.CUSTOM_JOB_NAME}/loss_metric.txt'
-    file_name = file_path.split('/')[-1]
-    loss = {'train_loss':log_metric_loss, 'ssim_score':ssim_metric}
+    file_path = f"{model_dir}/{args.time_stamp}_custom_job/{cfg.CUSTOM_JOB_NAME}/loss_metric.txt"
+    file_name = file_path.split("/")[-1]
+    loss = {"train_loss": log_metric_loss, "ssim_score": ssim_metric}
     logging.info(f"Metric returned to file: gs://q_vertex_ai_dev/{file_path}")
     blob = bucket.blob(file_path)
-    blob.upload_from_string(data=json.dumps(loss), content_type='application/json')
+    blob.upload_from_string(data=json.dumps(loss), content_type="application/json")
     logging.info(f"Metric is saved: {file_name}")
 
 logging.info("Job is completed")

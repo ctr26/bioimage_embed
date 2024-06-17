@@ -1,4 +1,3 @@
-
 # Note - you must have torchvision installed for this example
 from torch import nn
 from typing import Any
@@ -6,6 +5,7 @@ from abc import abstractmethod
 
 # from .types_ import *
 from torch import Tensor
+
 
 class BaseVAE(nn.Module):
     def __init__(self) -> None:
@@ -22,7 +22,7 @@ class BaseVAE(nn.Module):
 
     # def generate(self, x: Tensor, **kwargs) -> Tensor:
     #     raise NotImplementedError
-    
+
     # def forward(self, x):
     #     return self.model(x)
 

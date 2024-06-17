@@ -25,7 +25,6 @@ def write_default_config_file(config_path):
 #     print(cfg)
 
 
-
 def init_hydra(config_dir="conf", config_file="config.yaml", job_name="bie"):
     hydra.initialize(
         version_base=None,
@@ -53,10 +52,12 @@ def train(cfg: Config):
     bie.train()
     pass
 
+
 @hydra.main(config_path=".", config_name="config", version_base="1.1.0")
 def check(cfg: Config):
     bie = BioImageEmbed(cfg)
     bie.check()
+
 
 @hydra.main(config_path=".", config_name="config", version_base="1.1.0")
 def finetune(cfg: Config):

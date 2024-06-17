@@ -5,6 +5,7 @@ from pythae.models import VAEConfig
 
 from pl_bolts.models import autoencoders as ae
 
+
 class BaseResNetVQVAEEncoder(BaseEncoder):
     def __init__(
         self,
@@ -13,7 +14,7 @@ class BaseResNetVQVAEEncoder(BaseEncoder):
         enc_out_dim,
         first_conv=False,
         maxpool1=False,
-        **kwargs
+        **kwargs,
     ):
         super(BaseResNetVQVAEEncoder, self).__init__()
 
@@ -34,11 +35,16 @@ class BaseResNetVQVAEEncoder(BaseEncoder):
         return ModelOutput(embedding=embedding)
         # return ModelOutput(embedding=embedding, log_covariance=log_covariance)
 
+
 class ResNet50VQVAEEncoder(BaseResNetVQVAEEncoder):
     enc_out_dim = 2048
 
     def __init__(
-        self, model_config: VAEConfig, first_conv=False, maxpool1=False, **kwargs
+        self,
+        model_config: VAEConfig,
+        first_conv=False,
+        maxpool1=False,
+        **kwargs,
     ):
         super(ResNet50VQVAEEncoder, self).__init__(
             model_config,
@@ -46,7 +52,7 @@ class ResNet50VQVAEEncoder(BaseResNetVQVAEEncoder):
             self.enc_out_dim,
             first_conv,
             maxpool1,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -54,7 +60,11 @@ class ResNet18VQVAEEncoder(BaseResNetVQVAEEncoder):
     enc_out_dim = 512
 
     def __init__(
-        self, model_config: VAEConfig, first_conv=False, maxpool1=False, **kwargs
+        self,
+        model_config: VAEConfig,
+        first_conv=False,
+        maxpool1=False,
+        **kwargs,
     ):
         super(ResNet18VQVAEEncoder, self).__init__(
             model_config,
@@ -62,7 +72,7 @@ class ResNet18VQVAEEncoder(BaseResNetVQVAEEncoder):
             self.enc_out_dim,
             first_conv,
             maxpool1,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -73,7 +83,7 @@ class BaseResNetVQVAEDecoder(BaseDecoder):
         resnet_decoder,
         first_conv=False,
         maxpool1=False,
-        **kwargs
+        **kwargs,
     ):
         super(BaseResNetVQVAEDecoder, self).__init__()
         self.model_config = model_config
@@ -96,8 +106,13 @@ class BaseResNetVQVAEDecoder(BaseDecoder):
 
 class ResNet50VQVAEDecoder(BaseResNetVQVAEDecoder):
     enc_out_dim = 512
+
     def __init__(
-        self, model_config: VAEConfig, first_conv=False, maxpool1=False, **kwargs
+        self,
+        model_config: VAEConfig,
+        first_conv=False,
+        maxpool1=False,
+        **kwargs,
     ):
         super(ResNet50VQVAEDecoder, self).__init__(
             model_config, ae.resnet50_decoder, first_conv, maxpool1, **kwargs
@@ -106,8 +121,13 @@ class ResNet50VQVAEDecoder(BaseResNetVQVAEDecoder):
 
 class ResNet18VQVAEDecoder(BaseResNetVQVAEDecoder):
     enc_out_dim = 512
+
     def __init__(
-        self, model_config: VAEConfig, first_conv=False, maxpool1=False, **kwargs
+        self,
+        model_config: VAEConfig,
+        first_conv=False,
+        maxpool1=False,
+        **kwargs,
     ):
         super(ResNet18VQVAEDecoder, self).__init__(
             model_config, ae.resnet18_decoder, first_conv, maxpool1, **kwargs

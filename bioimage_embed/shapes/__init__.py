@@ -1,18 +1,17 @@
-from .lightning import MaskEmbed,MaskEmbedLatentAugment
-import torch 
+from .lightning import MaskEmbed, MaskEmbedLatentAugment
+import torch
 import torch.nn.functional as F
-
+from .transforms import DistogramToMaskPipeline
 
 def mask_from_latent(self, z, window_size):
     # This should be class-method based
     # I.e. self.decoder(z)
     dist = self.decoder(z).detach().numpy()
     mask = DistogramToMaskPipeline(window_size)(dist)
-    return mask 
+    return mask
 
 
 def loss_function(self, *args, recons, input, distance_matrix_loss=True, **kwargs):
-
     # decode_z, input, mu, log_var = kwargs
     # # Check to see if distance matrix creates a shape without intersecting edges
     # x_diff = torch.diff(recons,1,-1)-torch.diff(recons,2,-1)

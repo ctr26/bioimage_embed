@@ -32,14 +32,14 @@ DEFAULT_AUGMENTATION_LIST = [
     ),
     # Adjust image intensity with a specified range for individual channels
     A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
-    ToTensorV2()
+    ToTensorV2(),
 ]
 
 DEFAULT_AUGMENTATION = A.Compose(DEFAULT_AUGMENTATION_LIST)
 DEFAULT_ALBUMENTATION = A.Compose(DEFAULT_AUGMENTATION_LIST)
 
-class VisionWrapper:
 
+class VisionWrapper:
     def __init__(self, transform_dict, *args, **kwargs):
         self.transform_dict = transform_dict
         self.transform = A.from_dict(transform_dict)
@@ -49,8 +49,7 @@ class VisionWrapper:
         transformed = self.transform(image=img)
         return transformed["image"]
 
+
 class VisionWrapperSupervised:
-
-
     def __call__(self, data):
         raise NotImplementedError

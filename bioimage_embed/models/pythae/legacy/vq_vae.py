@@ -7,7 +7,6 @@ from torch.nn import functional as F
 from pythae import models
 
 
-
 # from pythae.models import VQVAE, Encoder, Decoder
 from pythae.models.base.base_utils import ModelOutput
 
@@ -22,7 +21,11 @@ from pythae.models import VQVAEConfig, VAEConfig
 
 class Encoder(BaseEncoder):
     def __init__(
-        self, model_config, num_hiddens, num_residual_hiddens, num_residual_layers
+        self,
+        model_config,
+        num_hiddens,
+        num_residual_hiddens,
+        num_residual_layers,
     ):
         super(Encoder, self).__init__()
         embedding_dim = model_config.latent_dim
@@ -48,7 +51,11 @@ class VQVAEEncoder(Encoder):
 
 class VAEDecoder(BaseDecoder):
     def __init__(
-        self, model_config, num_hiddens, num_residual_hiddens, num_residual_layers
+        self,
+        model_config,
+        num_hiddens,
+        num_residual_hiddens,
+        num_residual_layers,
     ):
         super(VAEDecoder, self).__init__()
         self.model = ResnetDecoder(
@@ -130,18 +137,18 @@ class VQVAE(models.VQVAE):
             input=x["data"],
         )
         # This matches how pythae returns the loss
-        
+
         indices = (encodings == 1).nonzero(as_tuple=True)
-        
+
         recon_loss = F.mse_loss(x_recon, x["data"], reduction="sum")
         mse_loss = F.mse_loss(x_recon, x["data"], reduction="mean")
 
-        variational_loss = loss-mse_loss
-         
+        variational_loss = loss - mse_loss
+
         pythae_loss_dict = {
             "recon_loss": mse_loss,
             "vq_loss": variational_loss,
-            # TODO check this proppperppply 
+            # TODO check this proppperppply
             "loss": recon_loss + variational_loss,
             "recon_x": x_recon,
             "z": z,
@@ -213,7 +220,11 @@ class VAE(models.VAE):
         recons_loss = F.mse_loss(recons, input)
         kld_loss = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
         loss = recons_loss + kld_loss
-        return {"loss": loss, "recon_loss": recons_loss, "variational_loss": kld_loss}
+        return {
+            "loss": loss,
+            "recon_loss": recons_loss,
+            "variational_loss": kld_loss,
+        }
 
 
 # Resnet50_VQVAE = partial(VQVAE,num_hidden_residuals=50)

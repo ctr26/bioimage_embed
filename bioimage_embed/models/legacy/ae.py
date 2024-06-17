@@ -1,4 +1,3 @@
-
 # Note - you must have torchvision installed for this example
 import torch
 from torch import nn
@@ -40,7 +39,6 @@ class AutoEncoder(nn.Module):
         return x
 
     def contract_block(self, in_channels, out_channels, kernel_size, padding):
-
         contract = nn.Sequential(
             torch.nn.Conv2d(
                 in_channels,
@@ -66,15 +64,22 @@ class AutoEncoder(nn.Module):
         return contract
 
     def expand_block(self, in_channels, out_channels, kernel_size, padding):
-
         expand = nn.Sequential(
             torch.nn.Conv2d(
-                in_channels, out_channels, kernel_size, stride=1, padding=padding
+                in_channels,
+                out_channels,
+                kernel_size,
+                stride=1,
+                padding=padding,
             ),
             torch.nn.BatchNorm2d(out_channels),
             torch.nn.ReLU(),
             torch.nn.Conv2d(
-                out_channels, out_channels, kernel_size, stride=1, padding=padding
+                out_channels,
+                out_channels,
+                kernel_size,
+                stride=1,
+                padding=padding,
             ),
             torch.nn.BatchNorm2d(out_channels),
             torch.nn.ReLU(),
@@ -88,5 +93,3 @@ class AutoEncoder(nn.Module):
             ),
         )
         return expand
-
-

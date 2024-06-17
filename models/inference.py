@@ -1,31 +1,19 @@
 import torch
 import umap
-import numpy as np
 import pandas as pd
-import torch.nn as nn
 from torchvision import transforms
 import os
-import requests
-import json
 from PIL import Image
-from torchvision.transforms import ToTensor
-import torch
-from torch.utils.data import Dataset
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from sklearn.preprocessing import LabelEncoder
 import umap.plot
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import LabelEncoder
 from sklearn.pipeline import Pipeline
 
 # import os
 import glob
-from PIL import Image
-from torchvision.transforms import ToTensor
-import torch
-from torch.utils.data import Dataset
 from idr import connection
 
 model_path = "models/model.pt"
@@ -168,7 +156,6 @@ class GeneData:
 # GeneData(transform)(filenames[0])
 # dataset = [GeneData(transform)(filename) for filename in filenames[0:500]]
 df = pd.DataFrame(index=filenames[0:10])
-from dask.delayed import delayed
 import dask.dataframe as dd
 
 
@@ -236,10 +223,14 @@ plt.show()
 conn.close()
 
 from sklearn.decomposition import PCA
+
 # Create a pipeline with PCA and Random Forest classifier
 pipeline = Pipeline(
     [
-        ("pca", PCA(n_components=0.95)),  # Set the number of desired components for PCA
+        (
+            "pca",
+            PCA(n_components=0.95),
+        ),  # Set the number of desired components for PCA
         ("classifier", RandomForestClassifier()),
     ]
 )

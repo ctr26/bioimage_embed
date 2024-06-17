@@ -1,16 +1,12 @@
 # %%
-from pytorch_lightning.loggers import TensorBoardLogger
 from hydra.utils import instantiate
 import torchvision
 import albumentations as A
 import hydra
 from omegaconf import DictConfig, OmegaConf
-from albumentations.pytorch.transforms import ToTensorV2
 
 from bioimage_embed.models.bolts import ResNet18VAEEncoder, ResNet18VAEDecoder
-from pythae.models import VQVAE, VQVAEConfig, VAE, VAEConfig
-from bioimage_embed.lightning import LitAutoEncoderTorch
-from pytorch_lightning import seed_everything
+from pythae.models import VAE, VAEConfig
 import torch
 from bioimage_embed.datasets import DatasetGlob
 
@@ -87,7 +83,6 @@ import pytorch_lightning as pl
 
 @hydra.main(config_path="conf", config_name="config", version_base="1.2")
 def main(cfg: DictConfig) -> None:
-
     model_config = VAEConfig(
         latent_dim=int(224),
         input_dim=(3, int(224), int(224)),
@@ -149,9 +144,9 @@ def main(cfg: DictConfig) -> None:
 
     # vae_model = VAEModel(model)
     # model = instantiate(cfg.pythae)
-    lightning_model = instantiate(cfg.lightning,model=model)
+    lightning_model = instantiate(cfg.lightning, model=model)
     # train_loader = torch.utils.data.DataLoader(data, batch_size=1, num_workers=4)
-    train_loader = instantiate(cfg.dataloader,transform=transform)
+    train_loader = instantiate(cfg.dataloader, transform=transform)
     trainer = instantiate(cfg.trainer)
 
     # trainer = pl.Trainer(

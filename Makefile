@@ -8,4 +8,3 @@ download.data:
 
 test:
 	pytest
-	

@@ -3,21 +3,19 @@
 # from omero.ObjectFactoryRegistrar import ExperimentObjectFactory
 # %%
 import torch
-import math
-from torchvision.datasets.vision import VisionDataset
-from torchvision.transforms import ToTensor
 import numpy as np
 import os
 
+from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from torch.utils.data import DataLoader
+
 # from idr import connection
-from torchvision.transforms import ToTensor
 import matplotlib.pyplot as plt
-from torchvision.datasets.folder import default_loader
 from PIL import Image
 from glob import glob
 import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
+
 # %%
 gpus = 0
 # workers = 16
@@ -59,7 +57,6 @@ parser.add_argument("--glob_pattern", type=str, default=glob_pattern)
 parser.add_argument("--gcloud_secret_file", type=str, default=gcloud_secret_file)
 
 
-
 # parser.add_argument("--gpus", type=int, default=gpus)
 
 # parser.add_argument("--gcloud_glob", type=str, default="idr-hipsci/**/*.tiff")
@@ -78,7 +75,6 @@ print(unknown)
 
 globals().update(vars(args))
 # args_dict = vars(parser.parse_args())
-
 
 
 # try:
@@ -120,6 +116,7 @@ globals().update(vars(args))
 #         print(f.key)
 # %%
 
+
 def to_img(x):
     x = 0.5 * (x + 1)
     x = x.clamp(0, 1)
@@ -127,24 +124,19 @@ def to_img(x):
     return x
 
 
-import numpy as np
-import matplotlib.pyplot as plt
-
 # import NPC8nodes
-import torch
 from torch import nn
-import torch.nn.functional as F
+
 # from scipy.ndimage import convolve
 # import seaborn as sns
-from torch.utils.data import Dataset, DataLoader
-import os
+from torch.utils.data import Dataset
 
 cuda_availability = torch.cuda.is_available()
 if cuda_availability:
-    device = torch.device('cuda:{}'.format(torch.cuda.current_device()))
+    device = torch.device("cuda:{}".format(torch.cuda.current_device()))
     print(f"{torch.cuda.get_device_name(0)}")
 else:
-    device = 'cpu'
+    device = "cpu"
 print(f"CUDA: {cuda_availability}")
 # https://pytorch.org/docs/stable/data.html#torch.utils.data.Dataset
 # https://pytorch.org/vision/stable/auto_examples/plot_scripted_tensor_transforms.html#sphx-glr-auto-examples-plot-scripted-tensor-transforms-py
@@ -170,6 +162,7 @@ print(f"CUDA: {cuda_availability}")
 # import boto3
 
 import json
+
 with open(gcloud_secret_file) as json_file:
     tokengcs = json.load(json_file)
 
@@ -198,23 +191,34 @@ import io
 # imageio.core.asarray(imageio.imread(current_image, "TIFF"))
 # %%
 
+
 # %%
 class IDRDataSet(Dataset):
-    def __init__(self, transform=None,training_dir="",mode="local",glob_pattern="**/*.tiff"):
+    def __init__(
+        self,
+        transform=None,
+        training_dir="",
+        mode="local",
+        glob_pattern="**/*.tiff",
+    ):
         super(IDRDataSet).__init__()
         self.transform = transform
         self.training_dir = training_dir
         self.glob_pattern = glob_pattern
         self.mode = mode
         # if training_dir == "None":
-            # self.mode = "http"
+        # self.mode = "http"
         if self.mode == "local":
-            self.file_list = glob(os.path.join(training_dir,glob_pattern),recursive=True)
+            self.file_list = glob(
+                os.path.join(training_dir, glob_pattern), recursive=True
+            )
         if self.mode == "gcp":
             # gcs = gcsfs.GCSFileSystem(project=gcloud_project,token=tokengcs)
-            gcs = gcsfs.GCSFileSystem(token=tokengcs,access='read_only',skip_instance_cache=True)
+            gcs = gcsfs.GCSFileSystem(
+                token=tokengcs, access="read_only", skip_instance_cache=True
+            )
             self.gcs_token = tokengcs
-            self.file_list = gcs.glob(os.path.join(training_dir,glob_pattern))
+            self.file_list = gcs.glob(os.path.join(training_dir, glob_pattern))
 
         # assert end > start, "this example code only works with end >= start"
         # self.start = start
@@ -227,15 +231,15 @@ class IDRDataSet(Dataset):
         # conn = self.conn
         self.index = index
 
-        if (self.mode=="http"):
+        if self.mode == "http":
             image = self.get_idr_image(index)
         # if (self.mode=="cloud"):
         #     image_array = self.read_tif_from_gcs(self.gcs,self.file_list[index])
         #     image = Image.fromarray(image_array)
-        if (self.mode=="local"):
-            image = self.get_nfs_idr_image(self.file_list,self.index)
-        if (self.mode=="gcp"):
-            image = self.get_gs_idr_image(self.gcs_token,self.file_list,self.index)
+        if self.mode == "local":
+            image = self.get_nfs_idr_image(self.file_list, self.index)
+        if self.mode == "gcp":
+            image = self.get_gs_idr_image(self.gcs_token, self.file_list, self.index)
         # if image.ndim != 2:
         #     return None
         #     return np.full([2048, 2048], np.nan)
@@ -244,7 +248,7 @@ class IDRDataSet(Dataset):
             return np.full([2048, 2048], np.nan)
 
         image = make_size(image, size=[2048, 2048])
-        image_np = np.array(image,dtype=np.uint8)
+        image_np = np.array(image, dtype=np.uint8)
 
         # print(f"Found image at {index}")
         if self.transform:
@@ -254,7 +258,7 @@ class IDRDataSet(Dataset):
 
     def __len__(self):
         # return 100
-        if (self.mode=="http"):
+        if self.mode == "http":
             return 100000
         else:
             return len(self.file_list)
@@ -277,18 +281,20 @@ class IDRDataSet(Dataset):
     #         return pil_image
     #     except:
     #         return None
-    #     file_path = file_list[index] 
+    #     file_path = file_list[index]
     #     return Image.open(file_path)
 
-    def get_nfs_idr_image(self,file_list=[],index=0):
-        file_path = file_list[index] 
+    def get_nfs_idr_image(self, file_list=[], index=0):
+        file_path = file_list[index]
         return Image.open(file_path)
 
-    def get_gs_idr_image(self,gcs_token,file_list=[],index=0):
-        return self.get_gs_image(gcs_token,file_list[index])
+    def get_gs_idr_image(self, gcs_token, file_list=[], index=0):
+        return self.get_gs_image(gcs_token, file_list[index])
 
-    def get_gs_image(self,gcs,path):
-        gcs = gcsfs.GCSFileSystem(token=tokengcs,access='read_only',skip_instance_cache=True)
+    def get_gs_image(self, gcs, path):
+        gcs = gcsfs.GCSFileSystem(
+            token=tokengcs, access="read_only", skip_instance_cache=True
+        )
         image_raw = gcs.cat(path)
         # current_image = Image.open(io.BytesIO(image_raw))
         return Image.open(io.BytesIO(image_raw))
@@ -339,7 +345,6 @@ def make_size(im, size=[2048, 2048]):
 
 
 def pad_to(im, size=[2048, 2048]):
-
     left = int(size[0] / 2 - im.size[0] / 2)
     top = int(size[1] / 2 - im.size[1] / 2)
 
@@ -383,12 +388,15 @@ transform = transforms.Compose(
     ]
 )
 
-dataset = IDRDataSet(transform=transform,
-        training_dir=training_dir,
-        glob_pattern=glob_pattern,
-        mode=mode)
+dataset = IDRDataSet(
+    transform=transform,
+    training_dir=training_dir,
+    glob_pattern=glob_pattern,
+    mode=mode,
+)
 
 # import nonechucks as nc
+
 
 # dataset = nc.SafeDataset(dataset)
 # dataloader = nc.SafeDataLoader(dataset, batch_size=bs, shuffle=shuffle)
@@ -406,10 +414,12 @@ def collate_fn(batch):
 #             batch.append(dataset[np.random.randint(0, len(dataset))])
 
 #     return torch.utils.data.dataloader.default_collate(batch)
-dataloader = DataLoader(dataset,
-                    # batch_size=16,
-                    # shuffle=shuffle,
-                    collate_fn=collate_fn)
+dataloader = DataLoader(
+    dataset,
+    # batch_size=16,
+    # shuffle=shuffle,
+    collate_fn=collate_fn,
+)
 
 # dataloader = nc.SafeDataset(dataloader)
 # data = iter(dataloader)
@@ -418,15 +428,16 @@ dataloader = DataLoader(dataset,
 
 # conn = connection('idr.openmicroscopy.org')
 import random
+
 rgb, gt = random.choice(dataset)
 
 plt.figure(figsize=(10, 5))
 plt.subplot(221)
 plt.imshow(torch.squeeze(rgb))
-plt.title(f"RGB")
+plt.title("RGB")
 plt.subplot(222)
 plt.imshow(torch.squeeze(gt))
-plt.title(f"GT")
+plt.title("GT")
 
 for i, (rgb, gt) in enumerate(dataloader):
     print(f"batch {i+1}:")
@@ -470,7 +481,6 @@ dataloader = DataLoader(
 
 
 #  %%
-import torchvision
 from torch.utils.data import Dataset, DataLoader
 
 
@@ -508,7 +518,6 @@ class UNet(nn.Module):
         return x
 
     def contract_block(self, in_channels, out_channels, kernel_size, padding):
-
         contract = nn.Sequential(
             torch.nn.Conv2d(
                 in_channels,
@@ -534,15 +543,22 @@ class UNet(nn.Module):
         return contract
 
     def expand_block(self, in_channels, out_channels, kernel_size, padding):
-
         expand = nn.Sequential(
             torch.nn.Conv2d(
-                in_channels, out_channels, kernel_size, stride=1, padding=padding
+                in_channels,
+                out_channels,
+                kernel_size,
+                stride=1,
+                padding=padding,
             ),
             torch.nn.BatchNorm2d(out_channels),
             torch.nn.ReLU(),
             torch.nn.Conv2d(
-                out_channels, out_channels, kernel_size, stride=1, padding=padding
+                out_channels,
+                out_channels,
+                kernel_size,
+                stride=1,
+                padding=padding,
             ),
             torch.nn.BatchNorm2d(out_channels),
             torch.nn.ReLU(),
@@ -739,7 +755,6 @@ model = LitAutoEncoder()
 tb_logger = pl_loggers.TensorBoardLogger("runs/")
 # training
 # tb_logger = pl_loggers.TensorBoardLogger('logs/')
-from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 
 checkpoint_callback = ModelCheckpoint(every_n_train_steps=100)
 
@@ -750,7 +765,6 @@ trainer = pl.Trainer(
     callbacks=[checkpoint_callback],
 ).from_argparse_args(args)
 #  %%
-import sys
 
 trainer.fit(model, dataloader)
 

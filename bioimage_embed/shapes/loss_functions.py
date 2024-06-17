@@ -20,15 +20,15 @@ class DistanceMatrixLoss:
         if norm:
             self.D = self.normalize(self.D)
 
-    def loss(self,losses):
-        losses = [getattr(self,loss)(self.D) for loss in losses]
+    def loss(self, losses):
+        losses = [getattr(self, loss)(self.D) for loss in losses]
         return torch.sum(torch.stack(losses))
 
     def normalize(self, D):
         # Frobenius norm
         return D / torch.norm(D, p="fro")
 
-    def loss_mean(self,loss_function):
+    def loss_mean(self, loss_function):
         # TODO fix this
         flat_D = self.D.view(-1, *self.D.size()[-2:])
         losses = []
@@ -36,7 +36,7 @@ class DistanceMatrixLoss:
             losses.append(loss_function(flat_D[i]))
         # losses = loss_function(flat_D)
         return torch.mean(torch.stack(losses))
-    
+
     # def loss_mean(self,loss_function):
     #     batch_size, num_channels, height, width = self.D.shape
     #     flat_D = self.D.view(batch_size * num_channels, height, width)
@@ -44,13 +44,13 @@ class DistanceMatrixLoss:
     #     for i in range(batch_size * num_channels):
     #         output.append(loss_function(flat_D[i]))
     #     return torch.mean(torch.stack(output))
-    
+
     def diagonal_loss(self):
         return diagonal_loss(self.D)
 
     def symmetry_loss(self):
         return symmetry_loss(self.D)
-    
+
     def non_negative_loss(self):
         return non_negative_loss(self.D)
 
@@ -59,7 +59,7 @@ class DistanceMatrixLoss:
 
     def clockwise_order_loss(self):
         return clockwise_order_loss(self.D)
-    
+
     def smoothness_loss(self):
         return smoothness_loss(self.D)
 
@@ -69,12 +69,9 @@ def triangle_inequality_loss_2D(distance_matrix):
     row_indices = torch.arange(n)
     combinations = torch.combinations(row_indices, 3)
     i, j, k = combinations.unbind(1)
-    violation = (
-        distance_matrix[i, j]
-        + distance_matrix[j, k]
-        - distance_matrix[i, k]
-    )
+    violation = distance_matrix[i, j] + distance_matrix[j, k] - distance_matrix[i, k]
     return torch.relu(violation).nanmean()
+
 
 def triangle_inequality_loss(distance_matrix, n=1000):
     # Get the shape of the last two dimensions
@@ -113,7 +110,7 @@ def clockwise_order_loss_2D(distance_matrix):
     combinations = torch.combinations(row_indices, 2)
     i, j = combinations.unbind(1)
 
-    expected_order = torch.arange(n).unsqueeze(0).repeat(n-1, 1)
+    expected_order = torch.arange(n).unsqueeze(0).repeat(n - 1, 1)
     expected_diff = (expected_order - expected_order.transpose(0, 1)) % n
 
     observed_diff = (distance_matrix[i, j] > distance_matrix[j, i]).long()
@@ -121,15 +118,19 @@ def clockwise_order_loss_2D(distance_matrix):
 
     return loss
 
+
 def clockwise_order_loss(distance_matrix):
     # Get the size of the last two dimensions
     n, m = distance_matrix.shape[-2:]
 
     # Create expected order tensor
-    expected_order = torch.arange(n*m).reshape(1, 1, n, m).to(distance_matrix.device)
+    expected_order = torch.arange(n * m).reshape(1, 1, n, m).to(distance_matrix.device)
 
     # Create expected difference tensor
-    expected_diff = (expected_order.unsqueeze(-1).unsqueeze(-1) - expected_order.unsqueeze(-3).unsqueeze(-3)) % (n*m)
+    expected_diff = (
+        expected_order.unsqueeze(-1).unsqueeze(-1)
+        - expected_order.unsqueeze(-3).unsqueeze(-3)
+    ) % (n * m)
 
     # Expand dimensions for broadcasting
     distance_matrix_exp = distance_matrix.unsqueeze(-2).unsqueeze(-2)
@@ -142,7 +143,7 @@ def clockwise_order_loss(distance_matrix):
 
     # Calculate loss
     loss = (observed_diff != expected_diff).float().mean()
-    
+
     return loss
 
 

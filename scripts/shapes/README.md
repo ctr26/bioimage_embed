@@ -12,8 +12,8 @@ bioimage_embed includes functions for loading and preprocessing images from micr
 # Installation
 
     pip install git+https://github.com/ctr26/bioimage_embed
-    
-   
+
+
 
 # Mask-VAE
 

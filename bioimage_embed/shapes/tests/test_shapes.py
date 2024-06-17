@@ -29,30 +29,31 @@ input_dim = (channels, window_size, window_size)
 models = []
 import numpy as np
 
+
 def create_circle_contour(radius, image_size):
     image = np.zeros(image_size, dtype=np.uint8)
     center = (image_size[0] // 2, image_size[1] // 2)
 
-    y, x = np.ogrid[:image_size[0], :image_size[1]]
+    y, x = np.ogrid[: image_size[0], : image_size[1]]
     distance = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
 
     image[np.abs(distance - radius) < 1] = 255  # Set contour to white
 
-    return image,distance
+    return image, distance
 
 
+(test_imgs,) = [create_circle_contour(32, (64, 64))]
 
-test_imgs, = [create_circle_contour(32, (64, 64))]
 
 @pytest.mark.parametrize("model", models)
 # @pytest.mark.parametrize("test_img", test_imgs)
 class TestMask:
-    test_img,test_dist = create_circle_contour(32, (64, 64))
-    
+    test_img, test_dist = create_circle_contour(32, (64, 64))
+
     test_img_torch = torch.tensor(test_img).unsqueeze(0).unsqueeze(0)
     test_dist_torch = torch.tensor(test_dist).unsqueeze(0).unsqueeze(0)
-    
-    def test_pipeline_forward(self,model):
+
+    def test_pipeline_forward(self, model):
         # dist = MaskToDistogramPipeline(window_size)(train_dataset_raw[0])
         # plt.imshow(dist)
         # plt.savefig("tests/test_mask_to_dist.png")
@@ -66,10 +67,10 @@ class TestMask:
         plt.imshow(mask.squeeze())
         plt.savefig("tests/test_dist_to_mask.png")
         plt.close()
-        
-    def test_mask_to_dist(self,model):
+
+    def test_mask_to_dist(self, model):
         dist = MaskToDistogramPipeline(window_size)(self.test_img_torch)
-        assert(dist == self.test_dist_torch)
+        assert dist == self.test_dist_torch
         pass
 
     def test_dist_to_coord(self, model, test_img):
@@ -80,6 +81,7 @@ class TestMask:
         plt.scatter(coords[-1][0][:, 0], coords[0][0][:, 1])
         plt.savefig("tests/test_dist_to_coord.png")
         plt.close()
+
 
 # @pytest.mark.parametrize("model", models)
 # class TestModels:

@@ -7,7 +7,6 @@ import umap
 import umap.plot
 
 #  %%
-from torch.utils.data import DataLoader, Dataset
 
 # Note - you must have torchvision installed for this example
 from torchvision import transforms
@@ -51,7 +50,7 @@ model_config_vqvae = pythae.models.VQVAEConfig(
 model = BioimageEmbed("VQ_VAE", model_config=model_config_vqvae, channels=channels)
 
 args = SimpleNamespace(**params, **optimizer_params, **lr_scheduler_params)
-lit_model = AutoEncoderUnsupervised(model,args)
+lit_model = AutoEncoderUnsupervised(model, args)
 model = AutoEncoderUnsupervised(model).load_from_checkpoint(ckpt_file, model=model)
 train_dataset = DatasetGlob(train_dataset_glob)
 
@@ -75,11 +74,11 @@ plt.close()
 # %%
 
 image_index = 5
-test_img_in = train_dataset[image_index][:,0:window_size,0:window_size].unsqueeze(0)
+test_img_in = train_dataset[image_index][:, 0:window_size, 0:window_size].unsqueeze(0)
+
 
 # I have upstreamed this function in the vqvae class but use this for now
 def vqvae_to_latent(model: VQ_VAE, img: torch.Tensor) -> torch.Tensor:
-
     vq = model.get_model().model._vq_vae
     embedding_torch = vq._embedding
     embedding_in = model.get_model().model.encoder_z(img)

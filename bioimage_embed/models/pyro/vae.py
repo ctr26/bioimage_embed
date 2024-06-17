@@ -1,40 +1,16 @@
-import glob
-import os
-import sys
-
-import matplotlib.pyplot as plt
-import numpy as np
 import pyro
 import pyro.distributions as dist
-import pytorch_lightning as pl
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-import torchvision
-from PIL import Image
-from pyro.infer import SVI, Trace_ELBO
-from pyro.optim import Adam
-from pytorch_lightning import loggers as pl_loggers
-from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
-from scipy import ndimage
-from scipy.interpolate import interp1d
-from scipy.ndimage import convolve, sobel
-from skimage.measure import find_contours, regionprops
-from sklearn.manifold import MDS
-from sklearn.metrics.pairwise import euclidean_distances
-from torch import nn
-from torch.utils.data import DataLoader, Dataset, random_split
+
 # Note - you must have torchvision installed for this example
-from torchvision import datasets, transforms
-from torchvision.transforms.functional import crop
-imort torch
+
 
 class VAE(nn.Module):
     # by default our latent space is 50-dimensional
     # and we use 400 hidden units
     def __init__(self, h_dim=(1, 5, 5), z_dim=(1, 5, 5), use_cuda=False):
-        super(VAE,self).__init__()
+        super(VAE, self).__init__()
         # create the encoder and decoder networks
         self.autoencoder = AutoEncoder(1, 1)
         self.encoder = self.autoencoder.encoder

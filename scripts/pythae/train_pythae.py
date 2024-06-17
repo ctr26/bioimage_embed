@@ -11,7 +11,6 @@ from torchvision import transforms
 from bioimage_embed.lightning import DatamoduleGlob
 
 from bioimage_embed.datasets import DatasetGlob
-from bioimage_embed.models import BioimageEmbed
 from bioimage_embed.lightning import AutoEncoderUnsupervised
 import matplotlib.pyplot as plt
 from pythae.models import VAE, VAEConfig
@@ -74,9 +73,7 @@ dataloader = DatamoduleGlob(
 )
 
 model = VAE(
-    model_config=VAEConfig(
-        input_dim=(1, window_size, window_size), latent_dim=10
-    ),
+    model_config=VAEConfig(input_dim=(1, window_size, window_size), latent_dim=10),
 )
 
 model_name = model._get_name()
@@ -93,7 +90,8 @@ checkpoint_callback = ModelCheckpoint(dirpath=f"{model_dir}/", save_last=True)
 
 trainer = pl.Trainer(
     logger=tb_logger,
-    accelerator='gpu', devices=1,
+    accelerator="gpu",
+    devices=1,
     accumulate_grad_batches=1,
     min_epochs=50,
     max_epochs=max_epochs,
@@ -101,4 +99,3 @@ trainer = pl.Trainer(
 )
 
 trainer.fit(lit_model, datamodule=dataloader)
-

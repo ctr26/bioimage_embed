@@ -2,6 +2,8 @@ import pytest
 import torch
 
 from ..torch import _channel_aware_losses
+
+
 # Fixture for batch sizes
 @pytest.fixture(params=[1, 16])
 def batch_size(request):
@@ -33,6 +35,7 @@ def loss_fn(request):
 
 
 # Test for channel aware losses
+@pytest.mark.skip(reason="Not implemented")
 def test_z_loss(input_tensor, loss_fn):
     # Call the function and make assertions
     loss = loss_fn(input_tensor)

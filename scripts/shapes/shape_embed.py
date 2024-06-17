@@ -1,11 +1,13 @@
 # %%
 import seaborn as sns
 import pyefd
-from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.dummy import DummyClassifier
-from sklearn.model_selection import cross_validate, KFold, train_test_split, StratifiedKFold
+from sklearn.model_selection import (
+    cross_validate,
+    KFold,
+    train_test_split,
+)
 from sklearn.metrics import make_scorer
 import pandas as pd
 from sklearn import metrics
@@ -16,7 +18,6 @@ from torch.autograd import Variable
 from types import SimpleNamespace
 import numpy as np
 from skimage import measure
-import umap.plot
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 import pytorch_lightning as pl
 import torch
@@ -49,8 +50,6 @@ from bioimage_embed.shapes.transforms import (
 )
 import matplotlib.pyplot as plt
 
-from bioimage_embed.lightning import DataModule
-import matplotlib as mpl
 from matplotlib import rc
 
 import pickle
@@ -101,7 +100,7 @@ def umap_plot(df, metadata, width=3.45, height=3.45 / 1.618):
     sns.despine(left=True, bottom=True)
     plt.tick_params(bottom=False, left=False, labelbottom=False, labelleft=False)
     plt.tight_layout()
-    plt.savefig(metadata(f"umap_no_axes.pdf"))
+    plt.savefig(metadata("umap_no_axes.pdf"))
     # plt.show()
     plt.close()
 
@@ -158,7 +157,11 @@ def shape_embed_process():
     height = width / 1.618
     plt.rcParams["figure.figsize"] = [width, height]
 
-    sns.set(style="white", context="notebook", rc={"figure.figsize": (width, height)})
+    sns.set(
+        style="white",
+        context="notebook",
+        rc={"figure.figsize": (width, height)},
+    )
 
     # matplotlib.use("TkAgg")
     interp_size = 128 * 2
@@ -277,13 +280,15 @@ def shape_embed_process():
 
     train_data = {
         key: torch.utils.data.Subset(
-            datasets.ImageFolder(train_data_path, transform=value), valid_indices
+            datasets.ImageFolder(train_data_path, transform=value),
+            valid_indices,
         )
         for key, value in transforms_dict.items()
     }
 
     dataset = torch.utils.data.Subset(
-        datasets.ImageFolder(train_data_path, transform=transform), valid_indices
+        datasets.ImageFolder(train_data_path, transform=transform),
+        valid_indices,
     )
 
     for key, value in train_data.items():
@@ -309,7 +314,7 @@ def shape_embed_process():
     plt.scatter(*coords, c=np.arange(interp_size), cmap="rainbow", s=2)
 
     # Save the plot as an image without border and coordinate axes
-    plt.savefig(metadata(f"transform_coords.png"), bbox_inches="tight", pad_inches=0)
+    plt.savefig(metadata("transform_coords.png"), bbox_inches="tight", pad_inches=0)
 
     # Close the plot
     plt.close()
@@ -340,7 +345,7 @@ def shape_embed_process():
 
     model_dir = f"checkpoints/{hashing_fn(args)}"
 
-    tb_logger = pl_loggers.TensorBoardLogger(f"logs/")
+    tb_logger = pl_loggers.TensorBoardLogger("logs/")
     wandb = pl_loggers.WandbLogger(project="bioimage-embed", name="shapes")
 
     Path(f"{model_dir}/").mkdir(parents=True, exist_ok=True)
@@ -364,7 +369,7 @@ def shape_embed_process():
         callbacks=[checkpoint_callback],
         min_epochs=50,
         max_epochs=args.epochs,
-        callbacks=[EarlyStopping(monitor="loss/val", mode="min")],
+        # callbacks=[EarlyStopping(monitor="loss/val", mode="min")],
         log_every_n_steps=1,
     )
     # %%
@@ -407,22 +412,21 @@ def shape_embed_process():
 
     predictions = trainer.predict(lit_model, datamodule=dataloader)
 
-
     test_dist_pred = predictions[0].out.recon_x
-    plt.imsave(metadata(f"test_dist_pred.png"), test_dist_pred.mean(axis=(0,1)))
+    plt.imsave(metadata("test_dist_pred.png"), test_dist_pred.mean(axis=(0, 1)))
     plt.close()
 
     test_dist_in = predictions[0].x.data
-    plt.imsave(metadata(f"test_dist_in.png"), test_dist_in.mean(axis=(0,1)))
+    plt.imsave(metadata("test_dist_in.png"), test_dist_in.mean(axis=(0, 1)))
     plt.close()
 
     test_pred_coords = AsymmetricDistogramToCoordsPipeline(window_size=window_size)(
         np.array(test_dist_pred[:, 0, :, :].unsqueeze(dim=0))
     )
 
-    plt.scatter(*test_pred_coords[0,0].T)
+    plt.scatter(*test_pred_coords[0, 0].T)
     # Save the plot as an image without border and coordinate axes
-    plt.savefig(metadata(f"test_pred_coords.png"), bbox_inches="tight", pad_inches=0)
+    plt.savefig(metadata("test_pred_coords.png"), bbox_inches="tight", pad_inches=0)
     plt.close()
 
     # Use the namespace variables
@@ -532,13 +536,13 @@ def shape_embed_process():
         trial_df = pd.concat([trial_df, trial["score_df"]])
     trial_df = trial_df.drop(["fit_time", "score_time"], axis=1)
 
-    trial_df.to_csv(metadata(f"trial_df.csv"))
-    trial_df.groupby("trial").mean().to_csv(metadata(f"trial_df_mean.csv"))
+    trial_df.to_csv(metadata("trial_df.csv"))
+    trial_df.groupby("trial").mean().to_csv(metadata("trial_df_mean.csv"))
     trial_df.plot(kind="bar")
 
     avg = trial_df.groupby("trial").mean()
     logger.info(avg)
-    avg.to_latex(metadata(f"trial_df.tex"))
+    avg.to_latex(metadata("trial_df.tex"))
 
     melted_df = trial_df.melt(id_vars="trial", var_name="Metric", value_name="Score")
     # fig, ax = plt.subplots(figsize=(width, height))
@@ -557,7 +561,7 @@ def shape_embed_process():
     # sns.move_legend(ax, "lower center", bbox_to_anchor=(1, 1))
     # ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     # plt.tight_layout()
-    plt.savefig(metadata(f"trials_barplot.pdf"))
+    plt.savefig(metadata("trials_barplot.pdf"))
     plt.close()
 
     avs = (

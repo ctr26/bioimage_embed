@@ -7,6 +7,7 @@ from bioimage_embed.augmentations import DEFAULT_AUGMENTATION_LIST
 import albumentations as A
 import os
 
+
 @dataclass
 class Receipe:
     _target_: str = "types.SimpleNamespace"

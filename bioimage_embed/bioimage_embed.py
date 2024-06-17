@@ -8,7 +8,7 @@ from bioimage_embed.lightning import DataModule
 from hydra.utils import instantiate
 from torch.autograd import Variable
 from pytorch_lightning import seed_everything
-from omegaconf import OmegaConf 
+from omegaconf import OmegaConf
 from . import utils
 
 logging.basicConfig(level=logging.INFO)
@@ -31,7 +31,6 @@ class BioImageEmbed:
         self.checkpoint_dir = utils.hashing_fn(recipe)
 
     def setup(self):
-        
         np.random.seed(self.icfg.recipe.seed)
         seed_everything(self.icfg.recipe.seed)
 
@@ -116,6 +115,7 @@ class BioImageEmbed:
             # opset_version=11,
             verbose=True,
         )
+
     def check(self):
         self.model_check()
         self.trainer_check()

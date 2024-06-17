@@ -7,6 +7,7 @@ from .. import config
 
 runner = CliRunner()
 
+
 @pytest.fixture
 def config_dir():
     return "test_conf"
@@ -78,6 +79,7 @@ def test_hydra():
     cfg.recipe.model = "resnet18_vae"
     cfg.recipe.max_epochs = 1
 
+
 # def test_cli():
 #     # This test checks if the CLI correctly handles the dataset target input
 #     result = runner.invoke(app, ["bie_train", "--dataset-target", "bioimage_embed.datasets.FakeImageFolder"])
@@ -99,25 +101,32 @@ def test_hydra():
 #     assert config["config_file"] == config_file, "Config file should match"
 #     assert config["job_name"] == job_name, "Job name should match"
 
+
 def test_init_hydra_with_invalid_config_dir():
     with pytest.raises(Exception):
         cli.init_hydra(config_dir="invalid_dir")
+
 
 def test_init_hydra_with_invalid_config_file():
     with pytest.raises(Exception):
         cli.init_hydra(config_file="invalid_config.yaml")
 
+
 @pytest.fixture
 def hydra_cfg():
     with initialize(config_path="."):
-        cfg = compose(config_name="config", overrides=[
-            'dataloader.dataset._target_=bioimage_embed.datasets.FakeImageFolder'
-        ])
+        # cfg = compose(config_name="config", overrides=[
+        #     'dataloader.dataset._target_=bioimage_embed.datasets.FakeImageFolder'
+        # ])
+        cfg = compose(config_name="config")
+        cfg.dataloader.dataset._target_ = "bioimage_embed.datasets.FakeImageFolder"
         return cfg
+
 
 @pytest.mark.skip("Computationally heavy")
 def test_train(hydra_cfg):
     cli.train(hydra_cfg)
+
 
 def test_check(hydra_cfg):
     cli.check(hydra_cfg)

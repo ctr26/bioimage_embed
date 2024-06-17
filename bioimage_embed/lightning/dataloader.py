@@ -1,8 +1,9 @@
 import pytorch_lightning as pl
 from .. import datasets
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from torch.utils.data import random_split
+from typing import Tuple
 
 
 class SimpleCustomBatch:
@@ -16,18 +17,25 @@ class SimpleCustomBatch:
 
 
 class DataModule(pl.LightningDataModule):
-    def __init__(self, dataset: Dataset, batch_size: int = 32, num_workers: int = 4,
-                 pin_memory: bool = False, drop_last: bool = False, collate_fn=None):
+    def __init__(
+        self,
+        dataset: Dataset,
+        batch_size: int = 32,
+        num_workers: int = 4,
+        pin_memory: bool = False,
+        drop_last: bool = False,
+        collate_fn=None,
+    ):
         super().__init__()
         self.dataset = dataset
         self.collate_fn = collate_fn if collate_fn else self.collate_filter_for_none
 
         self.dataloader_params = {
-            'batch_size': batch_size,
-            'num_workers': num_workers,
-            'pin_memory': pin_memory,
-            'drop_last': drop_last,
-            'collate_fn': collate_fn
+            "batch_size": batch_size,
+            "num_workers": num_workers,
+            "pin_memory": pin_memory,
+            "drop_last": drop_last,
+            "collate_fn": collate_fn,
         }
 
         self.train_dataset = None
@@ -40,9 +48,15 @@ class DataModule(pl.LightningDataModule):
         return torch.utils.data.dataloader.default_collate(batch)
 
     def setup(self, stage=None):
-        self.train_dataset, self.val_dataset, self.test_dataset = self.splitting(self.dataset)
+        (
+            self.train_dataset,
+            self.val_dataset,
+            self.test_dataset,
+        ) = self.splitting(self.dataset)
 
-    def splitting(self, dataset: Dataset, split_train=0.8, split_val=0.1, seed=42) -> Tuple[Dataset, Dataset, Dataset]:
+    def splitting(
+        self, dataset: Dataset, split_train=0.8, split_val=0.1, seed=42
+    ) -> Tuple[Dataset, Dataset, Dataset]:
         dataset_size = len(dataset)
         indices = list(range(dataset_size))
         train_size = int(split_train * dataset_size)
@@ -50,10 +64,14 @@ class DataModule(pl.LightningDataModule):
         test_size = dataset_size - train_size - val_size
 
         if train_size + val_size + test_size != dataset_size:
-            raise ValueError("The splitting ratios do not add up to the length of the dataset")
+            raise ValueError(
+                "The splitting ratios do not add up to the length of the dataset"
+            )
 
         torch.manual_seed(seed)
-        train_indices, val_indices, test_indices = random_split(indices, [train_size, val_size, test_size])
+        train_indices, val_indices, test_indices = random_split(
+            indices, [train_size, val_size, test_size]
+        )
 
         train_dataset = torch.utils.data.Subset(dataset, train_indices)
         val_dataset = torch.utils.data.Subset(dataset, val_indices)
@@ -68,12 +86,18 @@ class DataModule(pl.LightningDataModule):
         return DataLoader(self.train_dataset, shuffle=True, **self.dataloader_params)
 
     def val_dataloader(self):
-        return DataLoader(self.val_dataset, shuffle=False, **self.dataloader_params) if self.val_dataset else None
+        return (
+            DataLoader(self.val_dataset, shuffle=False, **self.dataloader_params)
+            if self.val_dataset
+            else None
+        )
 
     def test_dataloader(self):
-        return DataLoader(self.test_dataset, shuffle=False, **self.dataloader_params) if self.test_dataset else None
-
-
+        return (
+            DataLoader(self.test_dataset, shuffle=False, **self.dataloader_params)
+            if self.test_dataset
+            else None
+        )
 
 
 # class GenericDataModule(pl.LightningDataModule):
@@ -134,7 +158,6 @@ class DataModule(pl.LightningDataModule):
 
 #     def test_dataloader(self):
 #         return DataLoader(self.test_dataset, shuffle=False, **self.dataloader_params) if self.test_dataset else None
-
 
 
 # # class DataModule(pl.LightningDataModule):
@@ -217,7 +240,12 @@ class DataModule(pl.LightningDataModule):
 
 class DataModuleGlob(DataModule):
     def __init__(
-        self, glob_str, batch_size=32, num_workers=2**8, sampler=None, **kwargs
+        self,
+        glob_str,
+        batch_size=32,
+        num_workers=2**8,
+        sampler=None,
+        **kwargs,
     ):
         self.dataset = datasets.DatasetGlob(glob_str, **kwargs)
         super().__init__(
@@ -225,7 +253,7 @@ class DataModuleGlob(DataModule):
             batch_size=32,
             num_workers=2**8,
             sampler=None,
-            **kwargs
+            **kwargs,
         )
         # self.dataset = datasets.DatasetGlob(glob_str, **kwargs)
 

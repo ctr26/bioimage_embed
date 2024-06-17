@@ -50,7 +50,7 @@ To get a list of all commands and functions:
 bioimage_embed --help
 ```
 
-OR 
+OR
 
 ```bash
 bie --help
@@ -76,7 +76,7 @@ If you don't have a Kaggle account you must create one and then follow the next 
 For those intending to contribute or looking for a deeper dive into the codebase, we use `poetry` to manage our dependencies and virtual environments:
 
 ```bash
-poetry env use python 
+poetry env use python
 poetry install
 poetry shell
 ```

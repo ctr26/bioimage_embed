@@ -97,7 +97,7 @@ class AutoEncoder(pl.LightningModule):
         return {
             "loss": model_output.loss,
             "recon_loss": model_output.recon_loss,
-            "variational_loss":  model_output.loss-model_output.recon_loss,
+            "variational_loss": model_output.loss - model_output.recon_loss,
         }
 
     # def logging_step(self, z, loss, x, model_output, batch_idx):
@@ -180,10 +180,10 @@ class AutoEncoder(pl.LightningModule):
         )
 
         return loss
-    
+
     def log_wandb(self):
         pass
-    
+
     def log_tensorboard(self, model_output, x):
         # Optionally you can add more logging, for example, visualizations:
         self.logger.experiment.add_image(
@@ -197,11 +197,13 @@ class AutoEncoder(pl.LightningModule):
             self.global_step,
         )
 
+
 class AutoEncoderUnsupervised(AutoEncoder):
     def batch_to_tensor(self, batch: torch.Tensor):
         return ModelOutput(data=batch.float())
- 
+
+
 class AutoEncoderSupervised(AutoEncoder):
     def batch_to_tensor(self, batch: tuple):
-        x,y = batch
+        x, y = batch
         return ModelOutput(data=x.float(), target=y)

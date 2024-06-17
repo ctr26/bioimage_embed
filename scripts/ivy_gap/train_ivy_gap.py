@@ -4,10 +4,7 @@ from pathlib import Path
 from bioimage_embed.models import create_model
 import albumentations as A
 
-import matplotlib.pyplot as plt
-import pythae
 import pytorch_lightning as pl
-import torch
 from albumentations.pytorch import ToTensorV2
 from PIL import Image
 
@@ -123,14 +120,10 @@ dataloader.setup()
 model.eval()
 
 
-
 model_name = model._get_name()
 model_dir = f"models/{dataset}_{model_name}"
 
-lit_model = AutoEncoderUnsupervised(
-    model,
-    args
-)
+lit_model = AutoEncoderUnsupervised(model, args)
 
 tb_logger = pl_loggers.TensorBoardLogger(f"{model_dir}/runs/")
 

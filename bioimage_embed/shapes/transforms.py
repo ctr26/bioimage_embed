@@ -148,14 +148,12 @@ class CoordsToDistogram(torch.nn.Module):
         self.matrix_normalised = matrix_normalised
 
     def forward(self, coords):
-        return self.get_distogram(coords,
-                                matrix_normalised=self.matrix_normalised)
+        return self.get_distogram(coords, matrix_normalised=self.matrix_normalised)
 
     def __repr__(self):
         return self.__class__.__name__ + f"(size={self.size})"
 
     def get_distogram(self, coords, matrix_normalised=False):
-
         xii, yii = coords
         distance_matrix = euclidean_distances(np.array([xii, yii]).T) / (
             np.sqrt(2) * self.size
@@ -307,7 +305,10 @@ class DistogramToMaskPipeline(torch.nn.Module):
         super().__init__()
         self.window_size = window_size
         self.pipeline = transforms.Compose(
-            [DistogramToCoords(self.window_size), VerticesToMask(self.window_size)]
+            [
+                DistogramToCoords(self.window_size),
+                VerticesToMask(self.window_size),
+            ]
         )
 
     def forward(self, x):

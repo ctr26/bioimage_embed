@@ -46,7 +46,11 @@ def latent_dim():
 @pytest.fixture(scope="session")
 def model(input_dim, latent_dim):
     return bioimage_embed.models.create_model(
-        "resnet18_vqvae", input_dim, latent_dim, pretrained=False, progress=False
+        "resnet18_vqvae",
+        input_dim,
+        latent_dim,
+        pretrained=False,
+        progress=False,
     )
 
 
@@ -110,9 +114,11 @@ def transform(transformer_crop, transformer_dist, binary_mask):
 def distance_matrix(transform, binary_mask):
     return transform(binary_mask)
 
+
 @pytest.fixture(scope="session")
 def distance_matrix_tensor(distance_matrix):
     return distance_matrix.unsqueeze(0).float()
+
 
 def test_decoder(
     model,
@@ -134,7 +140,14 @@ def test_decoder(
 def test_generate(model, binary_mask_tensor, distance_matrix_tensor, window_size):
     # Test the generate functionality
     z = model.encoder(distance_matrix_tensor)
-    z_random = torch.normal(2*(torch.ones_like(z.embedding,)))
+    z_random = torch.normal(
+        2
+        * (
+            torch.ones_like(
+                z.embedding,
+            )
+        )
+    )
     generated_image_dist = model.decoder(z_random)
     np_dist = generated_image_dist.reconstruction.detach().numpy()
     mask = AsymmetricDistogramToMaskPipeline(window_size)(np_dist)
@@ -142,8 +155,8 @@ def test_generate(model, binary_mask_tensor, distance_matrix_tensor, window_size
     plt.imshow(binary_mask_tensor, cmap="gray")
     plt.savefig("tests/test_generate_img_crop.png")
     plt.close()
-    
-    plt.imshow(mask.transpose([0,3,2,1])[0].astype(float))
+
+    plt.imshow(mask.transpose([0, 3, 2, 1])[0].astype(float))
     plt.savefig("tests/test_generate_mask.png")
     plt.close()
     assert mask is not None, "Generated mask is None"

@@ -16,5 +16,3 @@ from .bolts import ResNet18VAEEncoder, ResNet18VAEDecoder
 from . import bolts
 from . import pythae
 from .factory import ModelFactory, create_model, MODELS
-
-
