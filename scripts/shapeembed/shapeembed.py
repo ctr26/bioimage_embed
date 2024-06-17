@@ -7,8 +7,6 @@ import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
-from sklearn.cluster import KMeans
-from sklearn.metrics import confusion_matrix, accuracy_score
 
 # general utils
 import os
@@ -27,6 +25,7 @@ import functools
 import bioimage_embed
 import bioimage_embed.shapes
 from dataset_transformations import *
+from evaluation import *
 
 # logging facilities
 ###############################################################################
@@ -280,30 +279,6 @@ def run_predictions(trainer, model, dataloader, num_workers=8):
 
   return (predictions, latent_space, df)
 
-def dataloader_to_dataframe(dataloader):
-  # gather the data and the associated labels, and drop rows with NaNs
-  all_data = []
-  all_lbls = []
-  for batch in dataloader:
-    inputs, lbls = batch
-    for data, lbl in zip(inputs, lbls):
-      all_data.append(data.flatten().numpy())
-      all_lbls.append(int(lbl))
-  df = pandas.DataFrame(all_data)
-  df['label'] = all_lbls
-  df.dropna()
-  return df
-
-def run_kmeans(dataframe, random_seed=42):
-  # run KMeans and derive accuracy metric and confusion matrix
-  kmeans = KMeans( n_clusters=len(dataframe['label'].unique())
-                 , random_state=random_seed
-                 ).fit(dataframe.drop('label', axis=1))
-  accuracy = accuracy_score(dataframe['label'], kmeans.labels_)
-  conf_mat = confusion_matrix(dataframe['label'], kmeans.labels_)
-
-  return kmeans, accuracy, conf_mat
-
 # main process
 ###############################################################################
 
@@ -335,11 +310,25 @@ def main_process(params):
 
   # gather metrics
   ################
+  # regionprops on input data
+  logger.info(f'-- regionprops on input data --')
+  regionprops_df = run_regionprops(params.dataset)
+  logger.debug(regionprops_df)
+  regionprops_score_df = score_dataframe(regionprops_df)
+  logger.info(f'-- regionprops on input data, score:')
+  logger.info(regionprops_score_df)
+  # elliptic fourier descriptors on input data
+  logger.info(f'-- elliptic fourier descriptors on input data --')
+  efd_df = run_elliptic_fourier_descriptors(params.dataset)
+  logger.debug(efd_df)
+  efd_score_df = score_dataframe(efd_df)
+  logger.info(f'-- elliptic fourier descriptors on input data, score:')
+  logger.info(efd_score_df)
   # kmeans on input data
-  _, accuracy, conf_mat = run_kmeans(dataloader_to_dataframe(dataloader.predict_dataloader()))
   logger.info(f'-- kmeans on input data --')
-  logger.info(f'-- accuracy: {accuracy}')
-  logger.info(f'-- confusion matrix:\n{conf_mat}')
+  _, accuracy, conf_mat = run_kmeans(dataloader_to_dataframe(dataloader.predict_dataloader()))
+  logger.info(f'-- kmeans accuracy: {accuracy}')
+  logger.info(f'-- kmeans confusion matrix:\n{conf_mat}')
 
 # main entry point
 ###############################################################################
