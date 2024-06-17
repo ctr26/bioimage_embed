@@ -65,7 +65,7 @@ class AutoEncoder(pl.LightningModule):
         raise NotImplementedError
 
     def embedding_from_output(self, model_output):
-        return model_output.z.view(model_output.z.shape[0], -1)
+        return model_output["z"].view(model_output["z"].shape[0], -1)
 
     def get_model_output(self, x, batch_idx):
         model_output = self.model(x, epoch=batch_idx)

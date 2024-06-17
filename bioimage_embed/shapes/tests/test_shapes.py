@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 import torch
 import matplotlib.pyplot as plt
 
@@ -9,8 +10,6 @@ import matplotlib.pyplot as plt
 from bioimage_embed.shapes.transforms import (
     MaskToDistogramPipeline,
     DistogramToMaskPipeline,
-)
-from bioimage_embed.shapes.transforms import (
     DistogramToCoords,
 )
 
@@ -20,87 +19,62 @@ from bioimage_embed.shapes.transforms import (
 
 interp_size = 128 * 4
 window_size = 64
-
 latent_dim = 64
-
 channels = 1
 input_dim = (channels, window_size, window_size)
 
-models = []
-import numpy as np
+# Assuming create_model is a function that creates models
+from bioimage_embed import create_model
 
-def create_circle_contour(radius, image_size):
+# Model names for parametrization
+model_names = ["resnet18_vae", "resnet18_vqvae"]
+
+@pytest.fixture(scope="session")
+def model(request):
+    return create_model(request.param, input_dim, latent_dim)
+
+@pytest.fixture(scope="session", params=model_names)
+def model_fixture(request):
+    return model(request)
+
+@pytest.fixture(scope="session", params=[(32, (64, 64)), (64, (128, 128))])
+def circle_contour(request):
+    radius, image_size = request.param
     image = np.zeros(image_size, dtype=np.uint8)
     center = (image_size[0] // 2, image_size[1] // 2)
-
     y, x = np.ogrid[:image_size[0], :image_size[1]]
     distance = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
-
     image[np.abs(distance - radius) < 1] = 255  # Set contour to white
+    return image, distance
 
-    return image,distance
-
-
-
-test_imgs, = [create_circle_contour(32, (64, 64))]
-
-@pytest.mark.parametrize("model", models)
-# @pytest.mark.parametrize("test_img", test_imgs)
-class TestMask:
-    test_img,test_dist = create_circle_contour(32, (64, 64))
-    
+@pytest.fixture
+def prepared_circle_contour(circle_contour):
+    test_img, test_dist = circle_contour
     test_img_torch = torch.tensor(test_img).unsqueeze(0).unsqueeze(0)
     test_dist_torch = torch.tensor(test_dist).unsqueeze(0).unsqueeze(0)
-    
-    def test_pipeline_forward(self,model):
-        # dist = MaskToDistogramPipeline(window_size)(train_dataset_raw[0])
-        # plt.imshow(dist)
-        # plt.savefig("tests/test_mask_to_dist.png")
-        # plt.close()
-        # plt.close()
-        dist = MaskToDistogramPipeline(window_size)(self.test_img_torch)
-        plt.imshow(dist.squeeze())
-        plt.savefig("tests/test_pipeline_forward.png")
-        plt.close()
-        mask = DistogramToMaskPipeline(window_size)(dist)
-        plt.imshow(mask.squeeze())
-        plt.savefig("tests/test_dist_to_mask.png")
-        plt.close()
-        
-    def test_mask_to_dist(self,model):
-        dist = MaskToDistogramPipeline(window_size)(self.test_img_torch)
-        assert(dist == self.test_dist_torch)
-        pass
+    return test_img_torch, test_dist_torch
 
-    def test_dist_to_coord(self, model, test_img):
-        # dist = transformer_dist(train_dataset[-1][0])
-        # TODO Faulty?
-        # test_img = get_test_image(dataset)
-        coords = DistogramToCoords(window_size)(test_img)
-        plt.scatter(coords[-1][0][:, 0], coords[0][0][:, 1])
-        plt.savefig("tests/test_dist_to_coord.png")
-        plt.close()
-
-# @pytest.mark.parametrize("model", models)
-# class TestModels:
-
-
-#     def test_dist_to_coord(self, model, test_img):
-#         # test_img = get_test_image(dataset)
-#         # dist = transformer_dist(train_dataset[0][0])
-#         coords = DistogramToCoords(window_size)(test_img)
-#         plt.scatter(coords[0][:, 0], coords[0][:, 1])
-#         plt.savefig("tests/test_dist_to_coord.png")
+# @pytest.mark.parametrize(indirect=True)
+# class TestMask:
+#     def test_pipeline_forward(self, prepared_circle_contour):
+#         test_img_torch, _ = prepared_circle_contour
+#         dist = MaskToDistogramPipeline(window_size)(test_img_torch)
+#         plt.imshow(dist.squeeze())
+#         plt.savefig("tests/test_pipeline_forward.png")
+#         plt.close()
+#         mask = DistogramToMaskPipeline(window_size)(dist)
+#         plt.imshow(mask.squeeze())
+#         plt.savefig("tests/test_dist_to_mask.png")
 #         plt.close()
 
-#     def test_models(self, model, test_img):
-#         # vae = AutoEncoder(1, 1)
-#         # vae = VQ_VAE(channels=1)
+#     def test_mask_to_dist(self, prepared_circle_contour ):
+#         test_img_torch, test_dist_torch = prepared_circle_contour
+#         dist = MaskToDistogramPipeline(window_size)(test_img_torch)
+#         assert torch.allclose(dist, test_dist_torch), "Distogram does not match expected output"
 
-#         # test_img = get_test_image(dataset)
-#         # loss, x_recon, perplexity = model(img)
-#         result = model(test_img)
-#         z, log_var = model.encode(test_img)
-#         y_prime = model.decode(z)
-#         # print(f"img_dims:{img.shape} y:_dims:{x_recon.shape}")
-#         print(f"img_dims:{test_img.shape}, z:_dims:{z.shape}")
+#     def test_dist_to_coord(self, prepared_circle_contour,):
+#         test_img_torch, _ = prepared_circle_contour
+#         coords = DistogramToCoords(window_size)(test_img_torch)
+#         plt.scatter(coords[-1][0][:, 0], coords[0][0][:, 1])
+#         plt.savefig("tests/test_dist_to_coord.png")
+#         plt.close()

@@ -114,6 +114,7 @@ def distance_matrix(transform, binary_mask):
 def distance_matrix_tensor(distance_matrix):
     return distance_matrix.unsqueeze(0).float()
 
+
 def test_decoder(
     model,
     distance_matrix_tensor,
