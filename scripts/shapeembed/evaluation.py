@@ -1,5 +1,6 @@
 from torchvision import datasets, transforms
 import pyefd
+from umap import UMAP
 from skimage import measure
 from sklearn.cluster import KMeans
 from sklearn.pipeline import Pipeline
@@ -22,7 +23,7 @@ from bioimage_embed.shapes.transforms import ImageToCoords
 # logging facilities
 ###############################################################################
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 def dataloader_to_dataframe(dataloader):
   # gather the data and the associated labels, and drop rows with NaNs
@@ -136,6 +137,52 @@ def score_dataframe( df, name
   df = df.drop(["fit_time", "score_time"], axis=1)
   df.insert(loc=0, column='trial', value=name)
   return df
+
+def umap_plot( df
+             , name
+             , outputdir='.'
+             , n_neighbors=15
+             , min_dist=0.1
+             , n_components=2
+             , rand_seed=42
+             , split=0.7
+             , width=3.45
+             , height=3.45 / 1.618 ):
+  clean_df = df.select_dtypes(include=['number'])
+  umap_reducer = UMAP( n_neighbors=n_neighbors
+                     , min_dist=min_dist
+                     , n_components=n_components
+                     , random_state=rand_seed )
+  mask = numpy.random.rand(len(clean_df)) < split
+
+  clean_df.reset_index(level='class', inplace=True)
+  classes = clean_df['class'].copy()
+  semi_labels = classes.copy()
+  semi_labels[~mask] = -1  # Assuming -1 indicates unknown label for semi-supervision
+  clean_df.drop('class', axis=1, inplace=True)
+
+  umap_embedding = umap_reducer.fit_transform(clean_df, y=semi_labels)
+  umap_data=pandas.DataFrame(umap_embedding, columns=["umap0", "umap1"])
+  umap_data['class'] = classes
+
+  ax = seaborn.relplot( data=umap_data
+                      , x="umap0"
+                      , y="umap1"
+                      , hue="class"
+                      , palette="deep"
+                      , alpha=0.5
+                      , edgecolor=None
+                      , s=5
+                      , height=height
+                      , aspect=0.5 * width / height )
+
+  seaborn.move_legend(ax, "upper center")
+  ax.set(xlabel=None, ylabel=None)
+  seaborn.despine(left=True, bottom=True)
+  plt.tick_params(bottom=False, left=False, labelbottom=False, labelleft=False)
+  plt.tight_layout()
+  plt.savefig(f"{outputdir}/umap_{name}.pdf")
+  plt.close()
 
 def save_scores( scores_df
                , outputdir='.'

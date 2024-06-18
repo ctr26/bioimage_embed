@@ -310,23 +310,25 @@ def main_process(params):
   # run predictions
   #################
   # ... and gather latent space
+  logger.info(f'-- run predictions and extract latent space --')
   predictions, latent_space, shapeembed_df = run_predictions(
     trainer, model, dataloader
   , num_workers=params.num_workers
   )
+  logger.debug(f'\n{shapeembed_df}')
   # ... and prepare output directory and save latent space
   os.makedirs(f"{params.output_dir}/", exist_ok=True)
   np.save(f'{params.output_dir}/latent_space.npy', latent_space)
   shapeembed_df.to_pickle(f'{params.output_dir}/latent_space.pkl')
+  logger.info(f'-- generate shapeembed umap --')
+  umap_plot(shapeembed_df, 'shapeembed', outputdir=params.output_dir)
 
   # gather metrics
   ################
-  # kmeans on input data and score
-  logger.info(f'-- kmeans on input data --')
-  kmeans, accuracy, conf_mat = run_kmeans(dataloader_to_dataframe(dataloader.predict_dataloader()))
-  print(kmeans)
-  logger.info(f'-- kmeans accuracy: {accuracy}')
-  logger.info(f'-- kmeans confusion matrix:\n{conf_mat}')
+  # score shape embed
+  logger.info(f'-- score shape embed --')
+  shapeembed_score_df = score_dataframe(shapeembed_df, f'shapeembed')
+  logger.info(f'-- shapeembed on input data, score:\n{shapeembed_score_df}')
   # regionprops on input data and score
   logger.info(f'-- regionprops on input data --')
   regionprops_df = run_regionprops(params.dataset)
@@ -339,11 +341,12 @@ def main_process(params):
   logger.debug(f'\n{efd_df}')
   efd_score_df = score_dataframe(efd_df, 'efd')
   logger.info(f'-- elliptic fourier descriptors on input data, score:\n{efd_score_df}')
-  # score shape embed
-  logger.info(f'-- score shape embed --')
-  logger.debug(f'\n{shapeembed_df}')
-  shapeembed_score_df = score_dataframe(shapeembed_df, f'shapeembed')
-  logger.info(f'-- shapeembed on input data, score:\n{shapeembed_score_df}')
+  # kmeans on input data and score
+  logger.info(f'-- kmeans on input data --')
+  kmeans, accuracy, conf_mat = run_kmeans(dataloader_to_dataframe(dataloader.predict_dataloader()))
+  print(kmeans)
+  logger.info(f'-- kmeans accuracy: {accuracy}')
+  logger.info(f'-- kmeans confusion matrix:\n{conf_mat}')
   # collate and save gathered results TODO KMeans
   scores_df = pandas.concat([ regionprops_score_df
                             , efd_score_df
