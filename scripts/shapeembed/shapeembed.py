@@ -299,36 +299,39 @@ def main_process(params):
   # run predictions
   #################
   # ... and gather latent space
-  predictions, latent_space, df = run_predictions(
+  predictions, latent_space, shapeembed_df = run_predictions(
     trainer, model, dataloader
   , num_workers=params.num_workers
   )
   # ... and prepare output directory and save latent space
   os.makedirs(f"{params.output_dir}/", exist_ok=True)
   np.save(f'{params.output_dir}/latent_space.npy', latent_space)
-  df.to_pickle(f'{params.output_dir}/latent_space.pkl')
+  shapeembed_df.to_pickle(f'{params.output_dir}/latent_space.pkl')
 
   # gather metrics
   ################
-  # regionprops on input data
+  # regionprops on input data and score
   logger.info(f'-- regionprops on input data --')
   regionprops_df = run_regionprops(params.dataset)
-  logger.debug(regionprops_df)
+  logger.debug(f'\n{regionprops_df}')
   regionprops_score_df = score_dataframe(regionprops_df)
-  logger.info(f'-- regionprops on input data, score:')
-  logger.info(regionprops_score_df)
-  # elliptic fourier descriptors on input data
+  logger.info(f'-- regionprops on input data, score:\n{regionprops_score_df}')
+  # elliptic fourier descriptors on input data and score
   logger.info(f'-- elliptic fourier descriptors on input data --')
   efd_df = run_elliptic_fourier_descriptors(params.dataset)
-  logger.debug(efd_df)
+  logger.debug(f'\n{efd_df}')
   efd_score_df = score_dataframe(efd_df)
-  logger.info(f'-- elliptic fourier descriptors on input data, score:')
-  logger.info(efd_score_df)
-  # kmeans on input data
+  logger.info(f'-- elliptic fourier descriptors on input data, score:\n{efd_score_df}')
+  # kmeans on input data and score
   logger.info(f'-- kmeans on input data --')
   _, accuracy, conf_mat = run_kmeans(dataloader_to_dataframe(dataloader.predict_dataloader()))
   logger.info(f'-- kmeans accuracy: {accuracy}')
   logger.info(f'-- kmeans confusion matrix:\n{conf_mat}')
+  # score shape embed
+  logger.info(f'-- score shape embed --')
+  logger.debug(f'\n{shapeembed_df}')
+  shapeembed_score_df = score_dataframe(shapeembed_df)
+  logger.info(f'-- shapeembed on input data, score:\n{shapeembed_score_df}')
 
 # main entry point
 ###############################################################################
@@ -384,14 +387,16 @@ if __name__ == '__main__':
     , help='remove checkpoints')
   parser.add_argument('-v', '--verbose', action='count', default=0
     , help="Increase verbosity level by adding more \"v\".")
-  
+
   # parse command line arguments
   clargs=parser.parse_args()
-  
+
   # set verbosity level
-  if clargs.verbose > 0:
-    logging.basicConfig(level=logging.DEBUG)
-  
+  if clargs.verbose > 2:
+    logger.setLevel(logging.DEBUG)
+  elif clargs.verbose > 0:
+    logger.setLevel(logging.INFO)
+
   # update default params with clargs
   params = copy.deepcopy(dflt_params)
   if clargs.model:
@@ -427,7 +432,7 @@ if __name__ == '__main__':
     params.output_dir = clargs.output_dir
   else:
     params.output_dir = f'./{params.model_name}_{params.latent_dim}_{params.batch_size}_{params.dataset.name}_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}'
-  
+
   # XXX
   torch.set_float32_matmul_precision('medium')
   # XXX

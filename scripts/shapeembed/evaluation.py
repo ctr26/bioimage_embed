@@ -95,10 +95,13 @@ def run_elliptic_fourier_descriptors(dataset_params, contour_size=512):
   return pandas.concat(dfs).xs('coeffs', level='coeffs')
 
 def score_dataframe(df, test_sz=0.2, rand_seed=42, shuffle=True, k_folds=5):
+  # drop strings and python object columns
+  #clean_df = df.select_dtypes(exclude=['object'])
+  clean_df = df.select_dtypes(include=['number'])
   # TODO, currently unused
   # Split the data into training and test sets
   #X_train, X_test, y_train, y_test = train_test_split(
-  #  df, df.index, stratify=df.index
+  #  clean_df, clean_df.index, stratify=clean_df.index
   #, test_size=test_sz, randm_state=rand_seed, shuffle=shuffle
   #)
   # Define a dictionary of metrics
@@ -119,8 +122,8 @@ def score_dataframe(df, test_sz=0.2, rand_seed=42, shuffle=True, k_folds=5):
   # Perform k-fold cross-validation
   cv_results = cross_validate(
     estimator=pipeline
-  , X=df
-  , y=df.index
+  , X=clean_df
+  , y=clean_df.index
   , cv=StratifiedKFold(n_splits=k_folds)
   , scoring=scoring
   , n_jobs=-1
