@@ -270,12 +270,12 @@ def run_predictions(trainer, model, dataloader, num_workers=8):
                              for _, lbl in datamod.predict_dataloader() ])
   fnames = [fname for fname, _ in ds.samples]
   df = pandas.DataFrame(latent_space)
-  df['class_idx'] = class_indices
-  #df['class'] = [ds.classes[x] for x in class_indices]
-  df['class'] = pandas.Series([ ds.classes[x]
-                                for x in class_indices]).astype("category")
-  df['fname'] = fnames
-  #df['scale'] = scalings[:,0].squeeze()
+  df.insert(loc=0, column='fname', value=fnames)
+  #df.insert(loc=0, column='scale', value=scalings[:,0].squeeze())
+  df.insert( loc=0, column='class_name'
+           , value=[ds.classes[x] for x in class_indices])
+  df.insert(loc=0, column='class', value=class_indices)
+  df.set_index("class", inplace=True)
 
   return (predictions, latent_space, df)
 
