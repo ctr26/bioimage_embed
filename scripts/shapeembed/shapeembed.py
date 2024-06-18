@@ -94,7 +94,7 @@ dflt_params = types.SimpleNamespace(
 , cycle_momentum=False
 )
 
-# data
+# dataset loading functions
 ###############################################################################
 
 def maybe_roll(dist_mat, p = 0.5):
@@ -310,28 +310,34 @@ def main_process(params):
 
   # gather metrics
   ################
+  # kmeans on input data and score
+  logger.info(f'-- kmeans on input data --')
+  kmeans, accuracy, conf_mat = run_kmeans(dataloader_to_dataframe(dataloader.predict_dataloader()))
+  print(kmeans)
+  logger.info(f'-- kmeans accuracy: {accuracy}')
+  logger.info(f'-- kmeans confusion matrix:\n{conf_mat}')
   # regionprops on input data and score
   logger.info(f'-- regionprops on input data --')
   regionprops_df = run_regionprops(params.dataset)
   logger.debug(f'\n{regionprops_df}')
-  regionprops_score_df = score_dataframe(regionprops_df)
+  regionprops_score_df = score_dataframe(regionprops_df, 'regionprops')
   logger.info(f'-- regionprops on input data, score:\n{regionprops_score_df}')
   # elliptic fourier descriptors on input data and score
   logger.info(f'-- elliptic fourier descriptors on input data --')
   efd_df = run_elliptic_fourier_descriptors(params.dataset)
   logger.debug(f'\n{efd_df}')
-  efd_score_df = score_dataframe(efd_df)
+  efd_score_df = score_dataframe(efd_df, 'efd')
   logger.info(f'-- elliptic fourier descriptors on input data, score:\n{efd_score_df}')
-  # kmeans on input data and score
-  logger.info(f'-- kmeans on input data --')
-  _, accuracy, conf_mat = run_kmeans(dataloader_to_dataframe(dataloader.predict_dataloader()))
-  logger.info(f'-- kmeans accuracy: {accuracy}')
-  logger.info(f'-- kmeans confusion matrix:\n{conf_mat}')
   # score shape embed
   logger.info(f'-- score shape embed --')
   logger.debug(f'\n{shapeembed_df}')
-  shapeembed_score_df = score_dataframe(shapeembed_df)
+  shapeembed_score_df = score_dataframe(shapeembed_df, f'shapeembed')
   logger.info(f'-- shapeembed on input data, score:\n{shapeembed_score_df}')
+  # collate and save gathered results TODO KMeans
+  scores_df = pandas.concat([ regionprops_score_df
+                            , efd_score_df
+                            , shapeembed_score_df ])
+  save_scores(scores_df, outputdir=params.output_dir)
 
 # main entry point
 ###############################################################################

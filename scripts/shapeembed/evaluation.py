@@ -14,6 +14,8 @@ import tqdm
 import numpy
 import pandas
 import logging
+import seaborn
+import matplotlib.pyplot as plt
 
 from bioimage_embed.shapes.transforms import ImageToCoords
 
@@ -93,7 +95,8 @@ def run_elliptic_fourier_descriptors(dataset_params, contour_size=512):
   # concatenate results as a single dataframe and return it
   return pandas.concat(dfs).xs('coeffs', level='coeffs')
 
-def score_dataframe(df, test_sz=0.2, rand_seed=42, shuffle=True, k_folds=5):
+def score_dataframe( df, name
+                   , test_sz=0.2, rand_seed=42, shuffle=True, k_folds=5 ):
   # drop strings and python object columns
   #clean_df = df.select_dtypes(exclude=['object'])
   clean_df = df.select_dtypes(include=['number'])
@@ -129,4 +132,35 @@ def score_dataframe(df, test_sz=0.2, rand_seed=42, shuffle=True, k_folds=5):
   , return_train_score=False
   )
   # Put the results into a DataFrame
-  return pandas.DataFrame(cv_results)
+  df = pandas.DataFrame(cv_results)
+  df = df.drop(["fit_time", "score_time"], axis=1)
+  df.insert(loc=0, column='trial', value=name)
+  return df
+
+def save_scores( scores_df
+               , outputdir='.'
+               , width = 3.45
+               , height = 3.45 / 1.618 ):
+  # save all raw scores as csv
+  scores_df.to_csv(f"{outputdir}/scores_df.csv")
+  # save score means as csv
+  scores_df.groupby("trial").mean().to_csv(f"{outputdir}/scores_df_mean.csv")
+  # save a barplot representation of scores
+  melted_df = scores_df.melt( id_vars="trial"
+                            , var_name="Metric"
+                            , value_name="Score" )
+  seaborn.catplot( data=melted_df
+                 , kind="bar"
+                 , x="trial"
+                 , hue="Metric"
+                 , y="Score"
+                 , errorbar="se"
+                 , height=height
+                 , aspect=width * 2**0.5 / height )
+  plt.savefig(f"{outputdir}/scores_barplot.pdf")
+  plt.close()
+  # log info
+  logger.info(melted_df.set_index(["trial", "Metric"])
+                .xs("test_f1", level="Metric", drop_level=False)
+                .groupby("trial")
+                .mean())
