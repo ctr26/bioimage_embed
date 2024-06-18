@@ -32,18 +32,17 @@ def dataloader_to_dataframe(dataloader):
       all_data.append(data.flatten().numpy())
       all_lbls.append(int(lbl))
   df = pandas.DataFrame(all_data)
-  df['label'] = all_lbls
+  df['class'] = all_lbls
   df.dropna()
   return df
 
 def run_kmeans(dataframe, random_seed=42):
   # run KMeans and derive accuracy metric and confusion matrix
-  kmeans = KMeans( n_clusters=len(dataframe['label'].unique())
+  kmeans = KMeans( n_clusters=len(dataframe['class'].unique())
                  , random_state=random_seed
-                 ).fit(dataframe.drop('label', axis=1))
-  accuracy = accuracy_score(dataframe['label'], kmeans.labels_)
-  conf_mat = confusion_matrix(dataframe['label'], kmeans.labels_)
-
+                 ).fit(dataframe.drop('class', axis=1))
+  accuracy = accuracy_score(dataframe['class'], kmeans.labels_)
+  conf_mat = confusion_matrix(dataframe['class'], kmeans.labels_)
   return kmeans, accuracy, conf_mat
 
 def run_regionprops( dataset_params
