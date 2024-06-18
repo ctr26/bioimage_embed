@@ -69,13 +69,15 @@ dflt_params = types.SimpleNamespace(
   )
 , batch_size=4
 , compression_factor=2
-, matrix_size=512
+, distance_matrix_size=512
 , num_embeddings=1024
 , num_hiddens=1024
 , num_workers=8
 , epochs=150
 , pretrained=False
 , frobenius_norm=False
+, distance_matrix_normalize=True
+, distance_matrix_roll_probability=1.0
 , checkpoints_path='./checkpoints'
 , commitment_cost=0.25
 , decay=0.99
@@ -113,14 +115,23 @@ def sanity_check(dist_mat):
   return dist_mat
 
 def get_dataloader(params):
+
   # transformations / checks to run on distance matrices
-  distmat_ts = transforms.Compose([
-    lambda x: x / np.linalg.norm(x, "fro") # normalize the matrix
-  , lambda x: maybe_roll(x, p = 1.0) # "potentially" roll the matrix
-  , sanity_check # check if the matrix is symmetric and positive, and the diagonal is zero
-  , torch.as_tensor # turn (H,W) numpy array into a (H,W) tensor
-  , lambda x: x.repeat(3, 1, 1) # turn (H,W) tensor into a (3,H,W) tensor (to fit downstream model expectations)
-  ])
+  ts = []
+  if params.distance_matrix_normalize: # optionally normalize the matrix
+    ts.append(lambda x: x / np.linalg.norm(x, "fro"))
+  if params.distance_matrix_roll_probability > 0.0: # optionally try to roll the matrix
+    ts.append(lambda x: maybe_roll(x, p=params.distance_matrix_roll_probability))
+  # always check if the matrix is symmetric, positive, and diagonal is zero
+  ts.append(sanity_check)
+  # turn (H,W) numpy array into a (H,W) tensor 
+  ts.append(torch.as_tensor)
+  # turn (H,W) tensor into a (3,H,W) tensor (downstream model expectations)
+  ts.append(lambda x: x.repeat(3, 1, 1))
+  # compose the all the distance matrix transformations
+  logger.debug(f'transformations to run: {len(ts)}')
+  distmat_ts = transforms.Compose(ts)
+
   # dataset to load
   logger.info(f'loading dataset {params.dataset.name}')
   dataset = None
@@ -131,7 +142,7 @@ def get_dataloader(params):
       params.dataset.path
     , transforms.Compose([ np.array
                          , functools.partial( mask2distmatrix
-                                            , matrix_size=params.matrix_size )
+                                            , matrix_size=params.distance_matrix_size )
                          , distmat_ts ]))
   elif params.dataset.type == 'distance_matrix': # distance matrix data
     dataset = datasets.DatasetFolder( params.dataset.path
@@ -342,10 +353,17 @@ def main_process(params):
 # main entry point
 ###############################################################################
 if __name__ == '__main__':
+
   def auto_pos_int (x):
     val = int(x,0)
     if val <= 0:
-      raise argparse.ArgumentTypeError("argument must be a positive int. Got {:d}.".format(val))
+      raise argparse.ArgumentTypeError(f"argument must be a positive int. Got {val:d}.")
+    return val
+
+  def prob (x):
+    val = float(x)
+    if val < 0.0 or val > 1.0:
+      raise argparse.ArgumentTypeError(f"argument must be between 0.0 and 1.0. Got {val:f}.")
     return val
   
   parser = argparse.ArgumentParser(description='Run the shape embed pipeline')
@@ -372,11 +390,17 @@ if __name__ == '__main__':
       '-b', '--batch-size', metavar='BATCH_SIZE', type=auto_pos_int
     , help=f"The BATCH_SIZE for the run, a positive integer (default {dflt_params.batch_size})")
   parser.add_argument(
+      '--distance-matrix-normalize', action=argparse.BooleanOptionalAction, default=None
+    , help=f'Whether to normalize the distance matrices or not')
+  parser.add_argument(
+      '--distance-matrix-roll-probability', metavar='ROLL_PROB', type=prob, default=None
+    , help=f'Probability to roll the distance matrices along the diagonal (default {dflt_params.distance_matrix_roll_probability})')
+  parser.add_argument(
       '-c', '--compression-factor', metavar='COMPRESSION_FACTOR', type=auto_pos_int
     , help=f"The COMPRESSION_FACTOR, a positive integer (default {dflt_params.compression_factor})")
   parser.add_argument(
       '--distance-matrix-size', metavar='MATRIX_SIZE', type=auto_pos_int
-    , help=f"The size of the distance matrix (default {dflt_params.matrix_size})")
+    , help=f"The size of the distance matrix (default {dflt_params.distance_matrix_size})")
   parser.add_argument(
       '--number-embeddings', metavar='NUM_EMBEDDINGS', type=auto_pos_int
     , help=f"The NUM_EMBEDDINGS, a positive integer (default {dflt_params.num_embeddings})")
@@ -420,12 +444,16 @@ if __name__ == '__main__':
   if clargs.batch_size:
     params.batch_size = clargs.batch_size
   if clargs.distance_matrix_size:
-    params.matrix_size = clargs.distance_matrix_size
-  params.input_dim = (3, params.matrix_size, params.matrix_size)
+    params.distance_matrix_size = clargs.distance_matrix_size
+  params.input_dim = (3, params.distance_matrix_size, params.distance_matrix_size)
+  if clargs.distance_matrix_normalize is not None:
+    params.distance_matrix_normalize = clargs.distance_matrix_normalize
+  if clargs.distance_matrix_roll_probability is not None:
+    params.distance_matrix_roll_probability = clargs.distance_matrix_roll_probability
   if clargs.compression_factor:
     params.compression_factor = clargs.compression_factor
   n_features = lambda d, n: d*(d-1)/(2**n)
-  params.latent_dim = n_features(params.matrix_size, params.compression_factor)
+  params.latent_dim = n_features(params.distance_matrix_size, params.compression_factor)
   if clargs.number_embeddings:
     params.num_embeddings = clargs.number_embeddings
   if clargs.number_hiddens:
@@ -442,4 +470,5 @@ if __name__ == '__main__':
   # XXX
   torch.set_float32_matmul_precision('medium')
   # XXX
+  logger.debug(f'run parameters:\n{params}')
   main_process(params)
