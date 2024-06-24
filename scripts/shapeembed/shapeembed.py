@@ -432,8 +432,8 @@ if __name__ == '__main__':
 
   # update default params with clargs
   params = copy.deepcopy(dflt_params)
-  if clargs.model_name:
-    params.model_name = clargs.model_name
+  if clargs.model:
+    params.model_name = clargs.model
   params.model_args = types.SimpleNamespace()
   if clargs.model_arg_beta:
     params.model_args.beta = clargs.model_arg_beta
