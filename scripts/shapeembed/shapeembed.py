@@ -439,7 +439,10 @@ if __name__ == '__main__':
     params.model_args.beta = clargs.model_arg_beta
   params.output_dir = clargs.output_dir
   if clargs.dataset:
-    params.dataset = clargs.dataset
+    params.dataset = types.SimpleNamespace( name=clargs.dataset[0]
+                                          , path=clargs.dataset[1]
+                                          , type=clargs.dataset[2] )
+
   if clargs.wandb_entity:
     params.wandb_entity = clargs.wandb_entity
   if clargs.wandb_project:
