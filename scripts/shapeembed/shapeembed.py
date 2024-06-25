@@ -76,6 +76,7 @@ dflt_params = types.SimpleNamespace(
 , epochs=150
 , pretrained=False
 , frobenius_norm=False
+, early_stop=False
 , distance_matrix_normalize=True
 , distance_matrix_roll_probability=1.0
 , checkpoints_path='./checkpoints'
@@ -208,6 +209,9 @@ def get_trainer(model, params):
 
   # setup trainer
   logger.info('setup trainer')
+  trainer_callbacks = [checkpoint_callback]
+  if params.early_stop:
+    trainer_callbacks.append(EarlyStopping(monitor="loss/val", mode="min"))
   trainer = pl.Trainer(
     logger=[wandblogger]
   , gradient_clip_val=0.5
@@ -215,9 +219,7 @@ def get_trainer(model, params):
   , devices=1
   , accelerator="gpu"
   , accumulate_grad_batches=4
-  , callbacks=[ checkpoint_callback
-              , EarlyStopping(monitor="loss/val", mode="min")
-              ]
+  , callbacks=trainer_callbacks
   , min_epochs=50
   , max_epochs=params.epochs
   , log_every_n_steps=1
@@ -393,6 +395,9 @@ if __name__ == '__main__':
       '-b', '--batch-size', metavar='BATCH_SIZE', type=auto_pos_int
     , help=f"The BATCH_SIZE for the run, a positive integer (default {dflt_params.batch_size})")
   parser.add_argument(
+      '--early-stop', action=argparse.BooleanOptionalAction, default=None
+    , help=f'Whether to stop training early or not (when loss "stops" decreasing. Beware of second decay...)')
+  parser.add_argument(
       '--distance-matrix-normalize', action=argparse.BooleanOptionalAction, default=None
     , help=f'Whether to normalize the distance matrices or not')
   parser.add_argument(
@@ -452,6 +457,8 @@ if __name__ == '__main__':
   if clargs.distance_matrix_size:
     params.distance_matrix_size = clargs.distance_matrix_size
   params.input_dim = (3, params.distance_matrix_size, params.distance_matrix_size)
+  if clargs.early_stop is not None:
+    params.early_stop = clargs.early_stop
   if clargs.distance_matrix_normalize is not None:
     params.distance_matrix_normalize = clargs.distance_matrix_normalize
   if clargs.distance_matrix_roll_probability is not None:
