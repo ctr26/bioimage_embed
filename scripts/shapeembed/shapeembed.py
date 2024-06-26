@@ -471,7 +471,7 @@ if __name__ == '__main__':
     params.distance_matrix_roll_probability = clargs.distance_matrix_roll_probability
   if clargs.compression_factor:
     params.compression_factor = clargs.compression_factor
-  n_features = lambda d, n: d*(d-1)/(2**n)
+  n_features = lambda d, n: d*(d-1)//(2**n)
   params.latent_dim = n_features(params.distance_matrix_size, params.compression_factor)
   if clargs.number_embeddings:
     params.num_embeddings = clargs.number_embeddings
