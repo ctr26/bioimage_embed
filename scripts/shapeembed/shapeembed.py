@@ -350,13 +350,24 @@ def main_process(params):
   logger.info(f'-- elliptic fourier descriptors on input data')
   logger.info(f'-- score:\n{efd_score_df}')
   logger.info(f'-- confusion matrix:\n{efd_cm}')
-  # kmeans on input data and score
-  logger.info(f'-- kmeans on input data --')
-  kmeans, accuracy, conf_mat = run_kmeans(dataloader_to_dataframe(dataloader.predict_dataloader()))
-  print(kmeans)
-  logger.info(f'-- kmeans accuracy: {accuracy}')
-  logger.info(f'-- kmeans confusion matrix:\n{conf_mat}')
-  # collate and save gathered results TODO KMeans
+  # combined shapeembed + efd + regionprops
+  logger.info(f'-- shapeembed + efd + regionprops --')
+  comb_df = pandas.concat([ shapeembed_df
+                          , efd_df.drop('class', axis=1)
+                          , regionprops_df.drop('class', axis=1) ], axis=1)
+  logger.debug(f'\n{comb_df}')
+  comb_cm, comb_score_df = score_dataframe(comb_df, 'combined')
+  logger.info(f'-- shapeembed + efd + regionprops on input data')
+  logger.info(f'-- score:\n{comb_score_df}')
+  logger.info(f'-- confusion matrix:\n{comb_cm}')
+  # XXX Not currently doing the kmeans
+  # XXX kmeans on input data and score
+  #logger.info(f'-- kmeans on input data --')
+  #kmeans, accuracy, conf_mat = run_kmeans(dataloader_to_dataframe(dataloader.predict_dataloader()))
+  #print(kmeans)
+  #logger.info(f'-- kmeans accuracy: {accuracy}')
+  #logger.info(f'-- kmeans confusion matrix:\n{conf_mat}')
+  ## collate and save gathered results TODO KMeans
   scores_df = pandas.concat([ regionprops_score_df
                             , efd_score_df
                             , shapeembed_score_df ])
