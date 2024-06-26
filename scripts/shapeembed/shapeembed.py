@@ -288,7 +288,8 @@ def run_predictions(trainer, model, dataloader, num_workers=8):
   df.insert( loc=0, column='class_name'
            , value=[ds.classes[x] for x in class_indices])
   df.insert(loc=0, column='class', value=class_indices)
-  df.set_index("class", inplace=True)
+  #df.set_index("class", inplace=True)
+  df.columns = df.columns.astype(str) # only string column names
 
   return (predictions, latent_space, df)
 

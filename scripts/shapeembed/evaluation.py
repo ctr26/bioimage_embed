@@ -69,7 +69,7 @@ def run_regionprops( dataset_params
     assert df.shape[0] == 1, f'More than one object in image #{i}'
     df.index = [i]
     df['class'] = lbl
-    df.set_index("class", inplace=True)
+    #df.set_index("class", inplace=True)
     dfs.append(df)
   # concatenate results as a single dataframe and return it
   df = pandas.concat(dfs)
@@ -97,7 +97,9 @@ def run_elliptic_fourier_descriptors(dataset_params, contour_size=512):
     df.set_index("class", inplace=True, append=True)
     dfs.append(df)
   # concatenate results as a single dataframe and return it
-  return pandas.concat(dfs).xs('coeffs', level='coeffs')
+  df = pandas.concat(dfs).xs('coeffs', level='coeffs')
+  df.reset_index(level='class', inplace=True)
+  return df
 
 def score_dataframe( df, name
                    , test_sz=0.2, rand_seed=42, shuffle=True, k_folds=5 ):
@@ -107,7 +109,8 @@ def score_dataframe( df, name
   # TODO, currently unused
   # Split the data into training and test sets
   #X_train, X_test, y_train, y_test = train_test_split(
-  #  clean_df, clean_df.index, stratify=clean_df.index
+  #  clean_df.drop('class', axis=1), clean_df['class']
+  #, stratify=clean_df['class']
   #, test_size=test_sz, randm_state=rand_seed, shuffle=shuffle
   #)
   # Define a dictionary of metrics
@@ -126,13 +129,16 @@ def score_dataframe( df, name
   #, ("clf", DummyClassifier())
   ])
   # build confusion matrix
-  lbl_pred = cross_val_predict(pipeline, clean_df, clean_df.index)
-  conf_mat = confusion_matrix(clean_df.index, lbl_pred)
+  clean_df.columns = clean_df.columns.astype(str) # only string column names
+  lbl_pred = cross_val_predict( pipeline
+                              , clean_df.drop('class', axis=1)
+                              , clean_df['class'])
+  conf_mat = confusion_matrix(clean_df['class'], lbl_pred)
   # Perform k-fold cross-validation
   cv_results = cross_validate(
     estimator=pipeline
-  , X=clean_df
-  , y=clean_df.index
+  , X=clean_df.drop('class', axis=1)
+  , y=clean_df['class']
   , cv=StratifiedKFold(n_splits=k_folds)
   , scoring=scoring
   , n_jobs=-1
@@ -161,7 +167,7 @@ def umap_plot( df
                      , random_state=rand_seed )
   mask = numpy.random.rand(len(clean_df)) < split
 
-  clean_df.reset_index(level='class', inplace=True)
+  #clean_df.reset_index(level='class', inplace=True)
   classes = clean_df['class'].copy()
   semi_labels = classes.copy()
   semi_labels[~mask] = -1  # Assuming -1 indicates unknown label for semi-supervision
