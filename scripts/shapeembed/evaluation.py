@@ -56,15 +56,18 @@ def run_regionprops( dataset_params
                                   , "minor_axis_length"
                                   , "orientation" ] ):
   # access the dataset
-  assert dataset_params.type == 'mask'
+  assert dataset_params.type == 'mask', f'unsupported dataset type {dataset_params.type}'
   ds = datasets.ImageFolder(dataset_params.path, transforms.Grayscale(1))
   # ... and run regionprops for the given properties for each image
   dfs = []
   logger.info(f'running regionprops on {dataset_params.name}')
   logger.info(f'({dataset_params.path})')
   for i, (img, lbl) in enumerate(tqdm.tqdm(ds)):
-    t = measure.regionprops_table(numpy.array(img), properties=properties)
+    data = numpy.where(numpy.array(img)>20, 255, 0)
+    t = measure.regionprops_table(data, properties=properties)
     df = pandas.DataFrame(t)
+    assert df.shape[0] == 1, f'More than one object in image #{i}'
+    df.index = [i]
     df['class'] = lbl
     df.set_index("class", inplace=True)
     dfs.append(df)
