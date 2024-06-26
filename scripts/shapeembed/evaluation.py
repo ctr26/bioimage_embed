@@ -165,7 +165,7 @@ def umap_plot( df
                      , min_dist=min_dist
                      , n_components=n_components
                      , random_state=rand_seed )
-  mask = numpy.random.rand(len(clean_df)) < split
+  mask = numpy.random.rand(clean_df.shape[0]) < split
 
   #clean_df.reset_index(level='class', inplace=True)
   classes = clean_df['class'].copy()
