@@ -291,7 +291,7 @@ def run_predictions(trainer, model, dataloader, num_workers=8):
   #df.set_index("class", inplace=True)
   df.columns = df.columns.astype(str) # only string column names
 
-  return (predictions, latent_space, df)
+  return latent_space, df
 
 # main process
 ###############################################################################
@@ -314,7 +314,7 @@ def main_process(params):
   #################
   # ... and gather latent space
   logger.info(f'-- run predictions and extract latent space --')
-  predictions, latent_space, shapeembed_df = run_predictions(
+  latent_space, shapeembed_df = run_predictions(
     trainer, model, dataloader
   , num_workers=params.num_workers
   )
