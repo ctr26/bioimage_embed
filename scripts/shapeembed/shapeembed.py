@@ -329,20 +329,26 @@ def main_process(params):
   ################
   # score shape embed
   logger.info(f'-- score shape embed --')
-  shapeembed_score_df = score_dataframe(shapeembed_df, f'shapeembed')
-  logger.info(f'-- shapeembed on input data, score:\n{shapeembed_score_df}')
+  shapeembed_cm, shapeembed_score_df = score_dataframe(shapeembed_df, f'shapeembed')
+  logger.info(f'-- shapeembed on input data')
+  logger.info(f'-- score:\n{shapeembed_score_df}')
+  logger.info(f'-- confusion matrix:\n{shapeembed_cm}')
   # regionprops on input data and score
   logger.info(f'-- regionprops on input data --')
   regionprops_df = run_regionprops(params.dataset)
   logger.debug(f'\n{regionprops_df}')
-  regionprops_score_df = score_dataframe(regionprops_df, 'regionprops')
-  logger.info(f'-- regionprops on input data, score:\n{regionprops_score_df}')
+  regionprops_cm, regionprops_score_df = score_dataframe(regionprops_df, 'regionprops')
+  logger.info(f'-- regionprops on input data')
+  logger.info(f'-- score:\n{regionprops_score_df}')
+  logger.info(f'-- confusion matrix:\n{regionprops_cm}')
   # elliptic fourier descriptors on input data and score
   logger.info(f'-- elliptic fourier descriptors on input data --')
   efd_df = run_elliptic_fourier_descriptors(params.dataset)
   logger.debug(f'\n{efd_df}')
-  efd_score_df = score_dataframe(efd_df, 'efd')
-  logger.info(f'-- elliptic fourier descriptors on input data, score:\n{efd_score_df}')
+  efd_cm, efd_score_df = score_dataframe(efd_df, 'efd')
+  logger.info(f'-- elliptic fourier descriptors on input data')
+  logger.info(f'-- score:\n{efd_score_df}')
+  logger.info(f'-- confusion matrix:\n{efd_cm}')
   # kmeans on input data and score
   logger.info(f'-- kmeans on input data --')
   kmeans, accuracy, conf_mat = run_kmeans(dataloader_to_dataframe(dataloader.predict_dataloader()))

@@ -9,7 +9,7 @@ from sklearn.discriminant_analysis import StandardScaler
 from sklearn import metrics
 from sklearn.metrics import make_scorer
 from sklearn.metrics import confusion_matrix, accuracy_score
-from sklearn.model_selection import cross_validate, KFold, train_test_split, StratifiedKFold
+from sklearn.model_selection import cross_validate, cross_val_predict, KFold, train_test_split, StratifiedKFold
 
 import tqdm
 import numpy
@@ -122,6 +122,9 @@ def score_dataframe( df, name
   , ("clf", RandomForestClassifier())
   #, ("clf", DummyClassifier())
   ])
+  # build confusion matrix
+  lbl_pred = cross_val_predict(pipeline, clean_df, clean_df.index)
+  conf_mat = confusion_matrix(clean_df.index, lbl_pred)
   # Perform k-fold cross-validation
   cv_results = cross_validate(
     estimator=pipeline
@@ -136,7 +139,7 @@ def score_dataframe( df, name
   df = pandas.DataFrame(cv_results)
   df = df.drop(["fit_time", "score_time"], axis=1)
   df.insert(loc=0, column='trial', value=name)
-  return df
+  return conf_mat, df
 
 def umap_plot( df
              , name
