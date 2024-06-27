@@ -356,7 +356,7 @@ def main_process(params):
                           , efd_df.drop('class', axis=1)
                           , regionprops_df.drop('class', axis=1) ], axis=1)
   logger.debug(f'\n{comb_df}')
-  comb_cm, comb_score_df = score_dataframe(comb_df, 'combined')
+  comb_cm, comb_score_df = score_dataframe(comb_df, 'combined_all')
   logger.info(f'-- shapeembed + efd + regionprops on input data')
   logger.info(f'-- score:\n{comb_score_df}')
   logger.info(f'-- confusion matrix:\n{comb_cm}')
@@ -367,10 +367,12 @@ def main_process(params):
   #print(kmeans)
   #logger.info(f'-- kmeans accuracy: {accuracy}')
   #logger.info(f'-- kmeans confusion matrix:\n{conf_mat}')
-  ## collate and save gathered results TODO KMeans
+
+  # collate and save gathered results TODO KMeans
   scores_df = pandas.concat([ regionprops_score_df
                             , efd_score_df
-                            , shapeembed_score_df ])
+                            , shapeembed_score_df
+                            , comb_score_df ])
   save_scores(scores_df, outputdir=params.output_dir)
 
 # main entry point
