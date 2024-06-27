@@ -334,6 +334,7 @@ def main_process(params):
   logger.info(f'-- shapeembed on input data')
   logger.info(f'-- score:\n{shapeembed_score_df}')
   logger.info(f'-- confusion matrix:\n{shapeembed_cm}')
+  confusion_matrix_plot(shapeembed_cm, 'shapeembed', params.output_dir)
   # regionprops on input data and score
   logger.info(f'-- regionprops on input data --')
   regionprops_df = run_regionprops(params.dataset)
@@ -342,6 +343,7 @@ def main_process(params):
   logger.info(f'-- regionprops on input data')
   logger.info(f'-- score:\n{regionprops_score_df}')
   logger.info(f'-- confusion matrix:\n{regionprops_cm}')
+  confusion_matrix_plot(regionprops_cm, 'regionprops_cm', params.output_dir)
   # elliptic fourier descriptors on input data and score
   logger.info(f'-- elliptic fourier descriptors on input data --')
   efd_df = run_elliptic_fourier_descriptors(params.dataset)
@@ -350,6 +352,7 @@ def main_process(params):
   logger.info(f'-- elliptic fourier descriptors on input data')
   logger.info(f'-- score:\n{efd_score_df}')
   logger.info(f'-- confusion matrix:\n{efd_cm}')
+  confusion_matrix_plot(efd_cm, 'efd', params.output_dir)
   # combined shapeembed + efd + regionprops
   logger.info(f'-- shapeembed + efd + regionprops --')
   comb_df = pandas.concat([ shapeembed_df
@@ -360,6 +363,7 @@ def main_process(params):
   logger.info(f'-- shapeembed + efd + regionprops on input data')
   logger.info(f'-- score:\n{comb_score_df}')
   logger.info(f'-- confusion matrix:\n{comb_cm}')
+  confusion_matrix_plot(comb_cm, 'combined_all', params.output_dir)
   # XXX Not currently doing the kmeans
   # XXX kmeans on input data and score
   #logger.info(f'-- kmeans on input data --')

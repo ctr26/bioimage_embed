@@ -150,6 +150,18 @@ def score_dataframe( df, name
   df.insert(loc=0, column='trial', value=name)
   return conf_mat, df
 
+def confusion_matrix_plot( cm, name, outputdir
+                         , figsize=(10,7) ):
+  # Plot confusion matrix
+  plt.clf()  # Clear figure
+  plt.figure(figsize=figsize)
+  seaborn.heatmap(cm, annot=True, fmt='d')
+  plt.title(f'{name} - Confusion Matrix')
+  plt.xlabel('Predicted')
+  plt.ylabel('Actual')
+  plt.savefig(f'{outputdir}/{name}_confusion_matrix.png')
+  plt.clf()  # Clear figure
+
 def umap_plot( df
              , name
              , outputdir='.'
