@@ -33,20 +33,32 @@ def main_process(clargs, logger=logging.getLogger(__name__)):
     df['model'] = model
     df['latent_space_sz'] = latent_space_sz
     df['dataset'] = dataset
+
     for trial in ['efd','regionprops','shapeembed', 'combined_all']:
+
       conf_mat = f'{trial}_confusion_matrix.png'
       if os.path.isfile(f'{d}/{conf_mat}'):
         shutil.copy(f'{d}/{conf_mat}',f'{clargs.output_dir}/{run_name}_{conf_mat}')
         df.loc[df['trial'] == trial, 'conf_mat'] = f'./{run_name}_{conf_mat}'
       else:
         df.loc[df['trial'] == trial, 'conf_mat'] = f'nofile'
+
       umap = f'umap_{trial}.pdf'
       if os.path.isfile(f'{d}/{umap}'):
         shutil.copy(f'{d}/{umap}',f'{clargs.output_dir}/{run_name}_{umap}')
         df.loc[df['trial'] == trial, 'umap'] = f'./{run_name}_{umap}'
       else:
         df.loc[df['trial'] == trial, 'umap'] = f'nofile'
+
+      barplot = f'scores_barplot.pdf'
+      if os.path.isfile(f'{d}/{barplot}'):
+        shutil.copy(f'{d}/{barplot}',f'{clargs.output_dir}/{run_name}_{barplot}')
+        df.loc[df['trial'] == trial, 'barplot'] = f'./{run_name}_{barplot}'
+      else:
+        df.loc[df['trial'] == trial, 'barplot'] = f'nofile'
+
     dfs.append(df.convert_dtypes())
+
   df = pd.concat(dfs)
   df = df.iloc[:, 1:] # drop first column 'unnamed' for non-mean df
   df.set_index(['dataset', 'trial', 'model', 'latent_space_sz'], inplace=True)
@@ -58,6 +70,7 @@ def main_process(clargs, logger=logging.getLogger(__name__)):
   , 'test_f1': 'mean'
   , 'conf_mat': keep_first_fname
   , 'umap': keep_first_fname
+  , 'barplot': keep_first_fname
   })
 
   print('-'*80)
@@ -80,24 +93,29 @@ def main_process(clargs, logger=logging.getLogger(__name__)):
 
   def html_img(path):
       if os.path.splitext(path)[1][1:] == 'png':
-        return f'<img class="zoom" src="{path}" width="50">'
+        return f'<a href="{path}"><img class="zoom" src="{path}" width="50"></a>'
       if os.path.splitext(path)[1][1:] == 'pdf':
-        return f'<iframe class="zoom" src="{path}" width="50" height="50"></iframe>'
+        return f'<a href="{path}"><object class="zoom" data="{path}" width="50" height="50"></a>'
       return '<div style="width: 50px">:(</div>'
   df['conf_mat'] = df['conf_mat'].apply(html_img)
   df['umap'] = df['umap'].apply(html_img)
+  df['barplot'] = df['barplot'].apply(html_img)
 
   def render_html(fname, d):
     with open(fname, 'w') as f:
-      f.write('''<style>
-      .df tbody tr:nth-child(even) { background-color: #dddddd; }
+      f.write('''<head>
+      <style>
+      .df tbody tr:nth-child(even) { background-color: lightblue; }
       .zoom {transition: transform .2s;}
-      .zoom:hover{transform: scale(16);}
+      .zoom:hover{transform: scale(10);}
       </style>
+      </head>
+      <body>
       ''')
       s = d.style
       s.set_table_styles([cell_hover, index_names, headers])
       s.to_html(f, classes='df')
+      f.write('</body>')
 
   with open(f'{clargs.output_dir}/gathered_table.tex', 'w') as f:
     f.write('\\documentclass[12pt]{article}\n\\usepackage{booktabs}\n\\usepackage{underscore}\n\\usepackage{multirow}\n\\begin{document}\n')
