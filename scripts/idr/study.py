@@ -3,7 +3,7 @@ import bioimage_embed.config as config
 # from ray.tune.integration.pytorch_lightning import (
 #     TuneReportCallback,
 #     TuneReportCheckpointCallback,
-    
+
 # )
 from ray import tune
 import numpy as np
@@ -20,46 +20,45 @@ from ray.train.lightning import (
 from pytorch_lightning import loggers as pl_loggers
 
 if __name__ == "__main__":
-
     ray.init()
     input_dim = [3, 224, 224]
     # trainer = instantiate(cfg.trainer)
     params_space = {
-            "model": tune.choice(
-                [
-                    "resnet50_vqvae",
-                    "resnet110_vqvae_legacy",
-                    "resnet152_vqvae_legacy",
-                ]
-            ),
-            # "data": "data",
-            "opt": tune.choice(["adamw","LAMB"]),
-            "max_epochs": 1000,
-            "max_steps": -1,
-            "weight_decay": tune.uniform(0.0001, 0.01),
-            "momentum": tune.uniform(0.8, 0.99),
-            # "sched": "cosine",
-            "epochs": 1000,
-            "lr": tune.loguniform(1e-6, 1e-2),
-            "batch_size": tune.choice([2 **x for x in range(4,12)])
-            # tune.qlograndint(4, 4096,q=1,base=2),
-            # "min_lr": 1e-6,
-            # "t_initial": 10,
-            # "t_mul": 2,
-            # "decay_rate": 0.1,
-            # "warmup_lr": 1e-6,
-            # "warmup_lr_init": 1e-6,
-            # "warmup_epochs": 5,
-            # "cycle_limit": None,
-            # "t_in_epochs": False,
-            # "noisy": False,
-            # "noise_std": 0.1,
-            # "noise_pct": 0.67,
-            # "cooldown_epochs": 5,
-            # "warmup_t": 0,
-            # "seed": 42
+        "model": tune.choice(
+            [
+                "resnet50_vqvae",
+                "resnet110_vqvae_legacy",
+                "resnet152_vqvae_legacy",
+            ]
+        ),
+        # "data": "data",
+        "opt": tune.choice(["adamw", "LAMB"]),
+        "max_epochs": 1000,
+        "max_steps": -1,
+        "weight_decay": tune.uniform(0.0001, 0.01),
+        "momentum": tune.uniform(0.8, 0.99),
+        # "sched": "cosine",
+        "epochs": 1000,
+        "lr": tune.loguniform(1e-6, 1e-2),
+        "batch_size": tune.choice([2**x for x in range(4, 12)]),
+        # tune.qlograndint(4, 4096,q=1,base=2),
+        # "min_lr": 1e-6,
+        # "t_initial": 10,
+        # "t_mul": 2,
+        # "decay_rate": 0.1,
+        # "warmup_lr": 1e-6,
+        # "warmup_lr_init": 1e-6,
+        # "warmup_epochs": 5,
+        # "cycle_limit": None,
+        # "t_in_epochs": False,
+        # "noisy": False,
+        # "noise_std": 0.1,
+        # "noise_pct": 0.67,
+        # "cooldown_epochs": 5,
+        # "warmup_t": 0,
+        # "seed": 42
     }
-        
+
     # root = "/nfs/ftp/public/databases/IDR/idr0093-mueller-perturbation"
 
     # mock_dataset = config.ImageFolderDataset(
@@ -76,7 +75,6 @@ if __name__ == "__main__":
     dataloader = config.DataLoader(dataset=mock_dataset)
     # breakpoint()
     model = config.Model(input_dim=input_dim)
-    
 
     lit_model = config.LightningModel(
         _target_="bioimage_embed.lightning.torch.AutoEncoderSupervisedNChannels",
@@ -90,9 +88,9 @@ if __name__ == "__main__":
         # callbacks=[RayTrainReportCallback()],
         plugins=[RayLightningEnvironment()],
     )
-    
+
     def task():
-        cfg = config.Config(dataloader=dataloader, model=model,trainer=trainer)
+        cfg = config.Config(dataloader=dataloader, model=model, trainer=trainer)
         bie = bioimage_embed.BioImageEmbed(cfg)
         # bie.icfg.trainer = prepare_trainer(bie.icfg.trainer)
         bie.check()
@@ -103,13 +101,13 @@ if __name__ == "__main__":
     gen = task.remote()
 
     def train(params):
-        
-        cfg = config.Config(dataloader=dataloader,
-                            model=model,
-                            trainer=trainer,
-                            recipe=config.Recipe(**params))
-        
-        
+        cfg = config.Config(
+            dataloader=dataloader,
+            model=model,
+            trainer=trainer,
+            recipe=config.Recipe(**params),
+        )
+
         bie = bioimage_embed.BioImageEmbed(cfg)
         wandb = pl_loggers.WandbLogger(project="bioimage-embed", name="shapes")
         # bie.icfg.trainer = prepare_trainer(bie.icfg.trainer)
@@ -117,7 +115,6 @@ if __name__ == "__main__":
         bie.train()
         wandb.finish()
         return bie
-
 
     analysis = tune.run(
         tune.with_parameters(train),
@@ -136,6 +133,5 @@ if __name__ == "__main__":
     )
     # results = tuner.fit()
     print("Best hyperparameters found were: ", analysis.best_config)
-
 
     # bie.export("model")
