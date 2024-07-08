@@ -10,8 +10,8 @@ from .bie import BioImageEmbed
 from .config import Config
 from . import augmentations
 
-# import logging
-# logging.captureWarnings(True)
+import logging
+logging.captureWarnings(True)
 
 __all__ = [
     "AESupervised",
