@@ -30,6 +30,7 @@ class Recipe:
     model: str = "resnet18_vae"
     data: str = "data"
     opt: str = "adamw"
+    batch_size: int = 16
     max_epochs: int = 125
     weight_decay: float = 0.001
     momentum: float = 0.9
