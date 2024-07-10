@@ -5,6 +5,8 @@ import bioimage_embed.config as config
 #     TuneReportCheckpointCallback,
 
 # )
+import albumentations as A  
+from types import SimpleNamespace
 from ray import tune
 import numpy as np
 from ray.train.torch import TorchTrainer
@@ -17,121 +19,108 @@ from ray.train.lightning import (
     RayTrainReportCallback,
     prepare_trainer,
 )
+import os
+import glob
+from PIL import Image
+from typing import List
+from torch.utils.data import Dataset
+import torch
+from joblib import Memory
+from pydantic.dataclasses import dataclass
 from pytorch_lightning import loggers as pl_loggers
-
-if __name__ == "__main__":
-    ray.init()
-    input_dim = [3, 224, 224]
-    # trainer = instantiate(cfg.trainer)
-    params_space = {
-        "model": tune.choice(
-            [
-                "resnet50_vqvae",
-                "resnet110_vqvae_legacy",
-                "resnet152_vqvae_legacy",
-            ]
-        ),
+params = {
+        "model": "resnet50_vqvae",
         # "data": "data",
-        "opt": tune.choice(["adamw", "LAMB"]),
+        "opt": "adamw",
         "max_epochs": 1000,
         "max_steps": -1,
-        "weight_decay": tune.uniform(0.0001, 0.01),
-        "momentum": tune.uniform(0.8, 0.99),
+        "weight_decay":0.0001,
+        "momentum": 0.9,
         # "sched": "cosine",
         "epochs": 1000,
-        "lr": tune.loguniform(1e-6, 1e-2),
-        "batch_size": tune.choice([2**x for x in range(4, 12)]),
-        # tune.qlograndint(4, 4096,q=1,base=2),
-        # "min_lr": 1e-6,
-        # "t_initial": 10,
-        # "t_mul": 2,
-        # "decay_rate": 0.1,
-        # "warmup_lr": 1e-6,
-        # "warmup_lr_init": 1e-6,
-        # "warmup_epochs": 5,
-        # "cycle_limit": None,
-        # "t_in_epochs": False,
-        # "noisy": False,
-        # "noise_std": 0.1,
-        # "noise_pct": 0.67,
-        # "cooldown_epochs": 5,
-        # "warmup_t": 0,
-        # "seed": 42
+        "lr": 1e-3,
+        "batch_size": 16,
     }
+memory = Memory(location='.', verbose=0)
 
-    # root = "/nfs/ftp/public/databases/IDR/idr0093-mueller-perturbation"
+@memory.cache
+def get_file_list(glob_str):
+    return glob.glob(os.path.join(glob_str), recursive=True)
 
+
+class GlobDataset(Dataset):
+    def __init__(self, glob_str,transform=None):
+        self.file_list = get_file_list(glob_str)
+    
+    def __len__(self):
+        return len(self.file_list)
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        img_name = self.file_list[idx]
+        image = Image.open(img_name)
+        # breakpoint()
+        image = np.array(image)
+        if transform:
+            # t = A.Compose([A.ToRGB(),transform, A.RandomCrop(224,224)]) 
+            t = A.Compose([A.ToRGB(),transform])
+            image = t(image=image)
+
+        # breakpoint()
+        # sample = {'image': image, 'path': img_name}
+
+        return image["image"], 0
+
+root_dir = '/nfs/ftp/public/databases/IDR/idr0093-mueller-perturbation/'
+root_dir = '/nfs/research/uhlmann/ctr26/idr/idr0093-mueller-perturbation/'
+
+if __name__ == "__main__":
+    print("training")
+    input_dim = [3, 224, 224]
+    
     # mock_dataset = config.ImageFolderDataset(
+    #     _target_="bioimage_embed.datasets.FakeImageFolder",
     #     image_size=input_dim,
-    #     root="/nfs/",
+    #     num_classes=1,
     # )
-
-    mock_dataset = config.ImageFolderDataset(
-        _target_="bioimage_embed.datasets.FakeImageFolder",
-        image_size=input_dim,
-        num_classes=1,
-    )
-
-    dataloader = config.DataLoader(dataset=mock_dataset)
     # breakpoint()
+    transform = instantiate(config.ATransform())
+    dataset = GlobDataset(root_dir+'**/*.tif*',transform)
+    dataloader = config.DataLoader(dataset=dataset,num_workers=32)
+
+    assert instantiate(dataloader,batch_size=1)
+    assert dataset[0]
+
     model = config.Model(input_dim=input_dim)
 
     lit_model = config.LightningModel(
-        _target_="bioimage_embed.lightning.torch.AutoEncoderSupervisedNChannels",
-        model=model,
+        _target_="bioimage_embed.lightning.torch.AutoEncoderSupervised",
+        model=model
     )
 
+    wandb = pl_loggers.WandbLogger(project="idr", name="0093")
     trainer = config.Trainer(
-        devices="auto",
         accelerator="auto",
-        strategy=RayDDPStrategy(),
-        # callbacks=[RayTrainReportCallback()],
-        plugins=[RayLightningEnvironment()],
-    )
-
-    def task():
-        cfg = config.Config(dataloader=dataloader, model=model, trainer=trainer)
-        bie = bioimage_embed.BioImageEmbed(cfg)
-        # bie.icfg.trainer = prepare_trainer(bie.icfg.trainer)
-        bie.check()
-        return True
-
-    assert task()
-    task = ray.remote(task)
-    gen = task.remote()
-
-    def train(params):
-        cfg = config.Config(
-            dataloader=dataloader,
-            model=model,
-            trainer=trainer,
-            recipe=config.Recipe(**params),
+        devices=1,
+        num_nodes=1,
+        # strategy="ddp",
+        callbacks=[],
+        plugin=[],
+        logger=[wandb],
         )
-
-        bie = bioimage_embed.BioImageEmbed(cfg)
-        wandb = pl_loggers.WandbLogger(project="bioimage-embed", name="shapes")
-        # bie.icfg.trainer = prepare_trainer(bie.icfg.trainer)
-        wandb.watch(bie.icfg.lit_model, log="all")
-        bie.train()
-        wandb.finish()
-        return bie
-
-    analysis = tune.run(
-        tune.with_parameters(train),
-        # resources_per_trial={"cpu": 32, "gpu": 1},
-        config=params_space,
-        # metric="loss",
-        # mode="min",
-        num_samples=1,
-        scheduler=tune.schedulers.ASHAScheduler(
-            metric="val/loss",
-            mode="min",
-            max_t=10,
-            grace_period=1,
-            reduction_factor=2,
-        ),
+    
+    cfg = config.Config(
+        dataloader=dataloader,
+        lit_model=lit_model,
+        trainer=trainer,
+        recipe=config.Recipe(**params),
     )
-    # results = tuner.fit()
-    print("Best hyperparameters found were: ", analysis.best_config)
-
-    # bie.export("model")
+    # breakpoint()
+    
+    bie = bioimage_embed.BioImageEmbed(cfg)
+    wandb.watch(bie.icfg.lit_model, log="all")
+    
+    bie.train()
+    wandb.finish()
