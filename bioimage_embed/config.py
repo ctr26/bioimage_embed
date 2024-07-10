@@ -30,6 +30,7 @@ class Recipe:
     model: str = "resnet18_vae"
     data: str = "data"
     opt: str = "adamw"
+    latent_dim: int = 64
     batch_size: int = 16
     max_epochs: int = 125
     weight_decay: float = 0.001
@@ -127,7 +128,7 @@ class Model:
     _target_: Any = "bioimage_embed.models.create_model"
     model: str = II("recipe.model")
     input_dim: List[int] = Field(default_factory=lambda: [3, 224, 224])
-    latent_dim: int = 64
+    latent_dim: int = II("recipe.latent_dim")
     pretrained: bool = True
 
 
@@ -171,7 +172,7 @@ class LightningModelSupervised(LightningModel):
 class Callbacks:
     # _target_: str = "collections.OrderedDict"
     model_checkpoint: Any = Field(default_factory=ModelCheckpoint)
-    early_stopping: Any = Field(default_factory=EarlyStopping)
+    # early_stopping: Any = Field(default_factory=EarlyStopping)
 
 
 
@@ -188,11 +189,12 @@ class TensorboardLogger:
 @dataclass
 class Loggers:
     tensorboard: Any = Field(default_factory=TensorboardLogger) 
-    
+
 @dataclass
 class Trainer:
+# class Trainer(pytorch_lightning.Trainer):
     _target_: Any = "pytorch_lightning.Trainer"
-    logger: Optional[List[Any]] = Field(default_factory=List)
+    logger: Any = None
     gradient_clip_val: float = 0.5
     enable_checkpointing: bool = True
     devices: Union[int, str] = "auto"
@@ -200,6 +202,7 @@ class Trainer:
     accumulate_grad_batches: int = 16
     min_epochs: int = 1
     max_epochs: int = II("recipe.max_epochs")
+    num_nodes: int = 1,
     log_every_n_steps: int = 1
     # This is not a clean implementation but I am not sure how to do it better
     callbacks: Any = Field(
@@ -207,7 +210,6 @@ class Trainer:
     )
     plugins: Any = None
     strategy: Any = Field(default_factory=lambda: "ddp")
-
 
 # TODO add argument caching for checkpointing
 
