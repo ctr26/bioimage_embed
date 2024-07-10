@@ -10,7 +10,7 @@ DEFAULT_AUGMENTATION_LIST = [
         ],
         p=0.5,
     ),
-    A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+
     A.Rotate(limit=45, p=0.5),
     # A.RandomGamma(gamma_limit=(80, 120), p=0.5),
     A.ElasticTransform(
@@ -25,6 +25,7 @@ DEFAULT_AUGMENTATION_LIST = [
     ),
     A.GaussNoise(var_limit=(10.0, 50.0), p=0.5),
     A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
+    A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ToTensorV2(),
 ]
 
