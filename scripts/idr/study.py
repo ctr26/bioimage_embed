@@ -51,6 +51,7 @@ def get_file_list(glob_str):
 class GlobDataset(Dataset):
     def __init__(self, glob_str,transform=None):
         self.file_list = get_file_list(glob_str)
+        self.transform = transform
     
     def __len__(self):
         return len(self.file_list)
@@ -63,9 +64,9 @@ class GlobDataset(Dataset):
         image = Image.open(img_name)
         # breakpoint()
         image = np.array(image)
-        if transform:
+        if self.transform:
             # t = A.Compose([A.ToRGB(),transform, A.RandomCrop(224,224)]) 
-            t = A.Compose([A.ToRGB(),transform])
+            t = A.Compose([A.ToRGB(),self.transform])
             image = t(image=image)
 
         # breakpoint()
