@@ -320,17 +320,17 @@ def main_process(params):
   , num_workers=params.num_workers
   )
   logger.debug(f'\n{shapeembed_df}')
-  np.save(f'{params.output_dir}/{params.dataset.name}_shapeembed_latent_space.npy', latent_space)
-  shapeembed_df.to_pickle(f'{params.output_dir}/{params.dataset.name}_shapeembed_latent_space.pkl')
-  shapeembed_df.to_csv(f"{params.output_dir}/{params.dataset.name}_shapeembed_df.csv")
+  np.save(f'{params.output_dir}/{params.dataset.name}-shapeembed-latent_space.npy', latent_space)
+  shapeembed_df.to_pickle(f'{params.output_dir}/{params.dataset.name}-shapeembed-latent_space.pkl')
+  shapeembed_df.to_csv(f"{params.output_dir}/{params.dataset.name}-shapeembed-raw_df.csv")
   logger.info(f'-- generate shapeembed umap --')
-  umap_plot(shapeembed_df, f'{params.dataset.name}_shapeembed', outputdir=params.output_dir)
+  umap_plot(shapeembed_df, f'{params.dataset.name}-shapeembed', outputdir=params.output_dir)
   logger.info(f'-- score shape embed --')
   shapeembed_cm, shapeembed_score_df = score_dataframe(shapeembed_df, f'shapeembed')
   logger.info(f'-- shapeembed on {params.dataset.name}, score\n{shapeembed_score_df}')
-  shapeembed_score_df.to_csv(f"{params.output_dir}/{params.dataset.name}_shapeembed_score_df.csv")
+  shapeembed_score_df.to_csv(f"{params.output_dir}/{params.dataset.name}-shapeembed-score_df.csv")
   logger.info(f'-- confusion matrix:\n{shapeembed_cm}')
-  confusion_matrix_plot(shapeembed_cm, f'{params.dataset.name}_shapeembed', params.output_dir)
+  confusion_matrix_plot(shapeembed_cm, f'{params.dataset.name}-shapeembed', params.output_dir)
   # XXX TODO move somewhere else if desired XXX
   ## combined shapeembed + efd + regionprops
   #logger.info(f'-- shapeembed + efd + regionprops --')

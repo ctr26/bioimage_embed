@@ -106,7 +106,7 @@ def confusion_matrix_plot( cm, name, outputdir
   plt.title(f'{name} - Confusion Matrix')
   plt.xlabel('Predicted')
   plt.ylabel('Actual')
-  plt.savefig(f'{outputdir}/{name}_confusion_matrix.png')
+  plt.savefig(f'{outputdir}/{name}-confusion_matrix.png')
   plt.clf()  # Clear figure
 
 def umap_plot( df
@@ -152,7 +152,7 @@ def umap_plot( df
   seaborn.despine(left=True, bottom=True)
   plt.tick_params(bottom=False, left=False, labelbottom=False, labelleft=False)
   plt.tight_layout()
-  plt.savefig(f"{outputdir}/{name}_umap.pdf")
+  plt.savefig(f"{outputdir}/{name}-umap.pdf")
   plt.close()
 
 def save_scores( scores_df
