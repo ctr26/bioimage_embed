@@ -46,6 +46,7 @@ models = [
   "resnet18_vae"
 , "resnet50_vae"
 , "resnet18_beta_vae"
+, "resnet50_beta_vae"
 , "resnet18_vae_bolt"
 , "resnet50_vae_bolt"
 , "resnet18_vqvae"
