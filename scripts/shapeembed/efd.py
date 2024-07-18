@@ -1,9 +1,10 @@
 #! /usr/bin/env python3
 
+import os
 import types
+import pyefd
 import logging
 import argparse
-import pyefd
 
 # own imports
 from evaluation import *
@@ -66,6 +67,9 @@ if __name__ == "__main__":
                                  , path=clargs.dataset[1]
                                  , type=clargs.dataset[2] )
   contour_size = dflt_contour_size
+
+  # create output dir if it does not exist
+  os.makedirs(clargs.output_dir, exist_ok=True)
 
   # efd on input data and score
 

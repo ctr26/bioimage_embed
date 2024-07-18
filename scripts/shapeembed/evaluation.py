@@ -23,7 +23,7 @@ from bioimage_embed.shapes.transforms import ImageToCoords
 # logging facilities
 ###############################################################################
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 
 def dataloader_to_dataframe(dataloader):
   # gather the data and the associated labels, and drop rows with NaNs
