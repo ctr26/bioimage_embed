@@ -4,6 +4,7 @@ import os
 import logging
 import argparse
 import datetime
+import itertools
 import subprocess
 
 # shapeembed parameters to sweap
@@ -11,22 +12,24 @@ import subprocess
 
 datasets_pfx = '/nfs/research/uhlmann/afoix/datasets/image_datasets'
 datasets = [
+  ("synthetic_shapes", f"{datasets_pfx}/synthetic_shapes/", "mask")
 #  ("tiny_synthcell", f"{datasets_pfx}/tiny_synthcellshapes_dataset/", "mask")
-  ("vampire", f"{datasets_pfx}/vampire/torchvision/Control/", "mask")
+#  ("vampire", f"{datasets_pfx}/vampire/torchvision/Control/", "mask")
 #, ("bbbc010", f"{datasets_pfx}/bbbc010/BBBC010_v1_foreground_eachworm/", "mask")
-, ("synthcell", f"{datasets_pfx}/synthcellshapes_dataset/", "mask")
+#, ("synthcell", f"{datasets_pfx}/synthcellshapes_dataset/", "mask")
 #, ("helakyoto", f"{datasets_pfx}/H2b_10x_MD_exp665/samples/", "mask")
 #, ("allen", f"{datasets_pfx}/allen_dataset/", "mask")
 ]
 
 models = [
   "resnet18_vae"
-#, "resnet50_vae"
-#, "resnet18_beta_vae"
+, "resnet50_vae"
+, "resnet18_beta_vae"
+, "resnet50_beta_vae"
 #, "resnet18_vae_bolt"
 #, "resnet50_vae_bolt"
 , "resnet18_vqvae"
-#, "resnet50_vqvae"
+, "resnet50_vqvae"
 #, "resnet18_vqvae_legacy"
 #, "resnet50_vqvae_legacy"
 #, "resnet101_vqvae_legacy"
@@ -37,12 +40,13 @@ models = [
 ]
 
 model_params = {
-  "resnet18_beta_vae": {'beta': [0.5, 1.0, 2]}
+  "resnet18_beta_vae": {'beta': [1,2,5,10,20]}
+, "resnet50_beta_vae": {'beta': [1,2,5,10,20]}
 }
 
-compression_factors = [2, 4]
+compression_factors = [1,2,3,5,10,20]
 
-batch_sizes = [4]
+batch_sizes = [4, 8, 16]
 
 # other parameters
 ################################################################################
@@ -54,8 +58,6 @@ slurm_time = '50:00:00'
 slurm_mem = '200G'
 slurm_gpus = 'a100:1'
 
-n_epochs = 2
-
 wandb_project='shapeembed'
 
 slurm_script="""#! /bin/bash
@@ -64,15 +66,19 @@ echo "  - dataset {dataset[0]} ({dataset[1]}, {dataset[2]})"
 echo "  - model {model} ({model_params})"
 echo "  - compression_factor {compression_factor}"
 echo "  - batch size {batch_size}"
-python3 shapeembed.py --wandb-project {wandb_project} --num-epochs {n_epochs} --dataset {dataset[0]} {dataset[1]} {dataset[2]} --model {model} --compression-factor {compression_factor} --batch-size {batch_size} --clear-checkpoints --output-dir {out_dir}
+python3 shapeembed.py --wandb-project {wandb_project} --dataset {dataset[0]} {dataset[1]} {dataset[2]} --model {model} --compression-factor {compression_factor} --batch-size {batch_size} --clear-checkpoints --output-dir {out_dir} {extra_args}
 """
 
 ################################################################################
 
-def spawn_slurm_job(logger, slurm_out_dir, out_dir, dataset, model, compression_factor, batch_size):
+def spawn_slurm_job(logger, slurm_out_dir, out_dir, dataset, model, compression_factor, batch_size, **kwargs):
   jobname = f'shapeembed_{dataset[0]}_{model}_{compression_factor}_{batch_size}'
   logger.info(f'spawning {jobname}')
   with open(f'{slurm_out_dir}/{jobname}.script', mode='w+') as fp:
+    extra_args=[]
+    for k, v in kwargs.items():
+      extra_args.append(f'--model-arg-{k}')
+      extra_args.append(f'{v}')
     fp.write(slurm_script.format( dataset=dataset
                                 , model=model
                                 , model_params=[]
@@ -80,7 +86,7 @@ def spawn_slurm_job(logger, slurm_out_dir, out_dir, dataset, model, compression_
                                 , batch_size=batch_size
                                 , out_dir=out_dir
                                 , wandb_project=wandb_project
-                                , n_epochs=n_epochs ))
+                                , extra_args=' '.join(extra_args) ))
     fp.flush()
     logger.info(f'written {fp.name}')
     logger.debug(f'cat {fp.name}')
@@ -129,4 +135,11 @@ if __name__ == "__main__":
                                   for m in models
                                   for cf in compression_factors
                                   for bs in batch_sizes ]:
-    spawn_slurm_job(logger, clargs.slurm_output_dir, clargs.output_dir, *params)
+    # per model params:
+    m = params[1]
+    if m in model_params:
+      mps = model_params[m]
+      for ps in [dict(zip(mps.keys(), vs)) for vs in itertools.product(*mps.values())]:
+        spawn_slurm_job(logger, clargs.slurm_output_dir, clargs.output_dir, *params, **ps)
+    else:
+      spawn_slurm_job(logger, clargs.slurm_output_dir, clargs.output_dir, *params)
