@@ -49,6 +49,7 @@ def run_kmeans(dataframe, random_seed=42):
   return kmeans, accuracy, conf_mat
 
 def score_dataframe( df, name
+                   , tag_columns=[]
                    , test_sz=0.2, rand_seed=42, shuffle=True, k_folds=5 ):
   # drop strings and python object columns
   #clean_df = df.select_dtypes(exclude=['object'])
@@ -95,6 +96,9 @@ def score_dataframe( df, name
   df = pandas.DataFrame(cv_results)
   df = df.drop(["fit_time", "score_time"], axis=1)
   df.insert(loc=0, column='trial', value=name)
+  tag_columns.reverse()
+  for tag_col_name, tag_col_value in tag_columns:
+    df.insert(loc=0, column=tag_col_name, value=tag_col_value)
   return conf_mat, df
 
 def confusion_matrix_plot( cm, name, outputdir

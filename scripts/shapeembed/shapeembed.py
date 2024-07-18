@@ -97,6 +97,24 @@ dflt_params = types.SimpleNamespace(
 , cycle_momentum=False
 )
 
+def model_str(params):
+  s = f'{params.model_name}'
+  if vars(params.model_args):
+    s += f"-{'_'.join([f'{k}{v}' for k, v in vars(params.model_args).items()])}"
+  return s
+
+def job_str(params):
+  return f"{params.dataset.name}-{model_str(params)}-{params.compression_factor}-{params.latent_dim}-{params.batch_size}"
+
+def tag_cols(params):
+  cols = []
+  cols.append(('dataset', params.dataset.name))
+  cols.append(('model', model_str(params)))
+  cols.append(('compression_factor', params.compression_factor))
+  cols.append(('latent_dim', params.latent_dim))
+  cols.append(('batch_size', params.batch_size))
+  return cols
+
 # dataset loading functions
 ###############################################################################
 
@@ -191,8 +209,7 @@ def get_trainer(model, params):
 
   # setup WandB logger
   logger.info('setup wandb logger')
-  jobname = f"{params.model_name}_{'_'.join([f'{k}{v}' for k, v in vars(params.model_args).items()])}_{params.latent_dim}_{params.batch_size}_{params.dataset.name}"
-  wandblogger = pl_loggers.WandbLogger(entity=params.wandb_entity, project=params.wandb_project, name=jobname)
+  wandblogger = pl_loggers.WandbLogger(entity=params.wandb_entity, project=params.wandb_project, name=job_str(params))
   wandblogger.watch(model, log="all")
 
   # setup checkpoints
@@ -320,17 +337,18 @@ def main_process(params):
   , num_workers=params.num_workers
   )
   logger.debug(f'\n{shapeembed_df}')
-  np.save(f'{params.output_dir}/{params.dataset.name}-shapeembed-latent_space.npy', latent_space)
-  shapeembed_df.to_pickle(f'{params.output_dir}/{params.dataset.name}-shapeembed-latent_space.pkl')
-  shapeembed_df.to_csv(f"{params.output_dir}/{params.dataset.name}-shapeembed-raw_df.csv")
+  pfx=job_str(params)
+  np.save(f'{params.output_dir}/{pfx}-shapeembed-latent_space.npy', latent_space)
+  shapeembed_df.to_pickle(f'{params.output_dir}/{pfx}-shapeembed-latent_space.pkl')
+  shapeembed_df.to_csv(f"{params.output_dir}/{pfx}-shapeembed-raw_df.csv")
   logger.info(f'-- generate shapeembed umap --')
-  umap_plot(shapeembed_df, f'{params.dataset.name}-shapeembed', outputdir=params.output_dir)
+  umap_plot(shapeembed_df, f'{pfx}-shapeembed', outputdir=params.output_dir)
   logger.info(f'-- score shape embed --')
-  shapeembed_cm, shapeembed_score_df = score_dataframe(shapeembed_df, f'shapeembed')
+  shapeembed_cm, shapeembed_score_df = score_dataframe(shapeembed_df, pfx, tag_cols(params))
   logger.info(f'-- shapeembed on {params.dataset.name}, score\n{shapeembed_score_df}')
-  shapeembed_score_df.to_csv(f"{params.output_dir}/{params.dataset.name}-shapeembed-score_df.csv")
+  shapeembed_score_df.to_csv(f"{params.output_dir}/{pfx}-shapeembed-score_df.csv")
   logger.info(f'-- confusion matrix:\n{shapeembed_cm}')
-  confusion_matrix_plot(shapeembed_cm, f'{params.dataset.name}-shapeembed', params.output_dir)
+  confusion_matrix_plot(shapeembed_cm, f'{pfx}-shapeembed', params.output_dir)
   # XXX TODO move somewhere else if desired XXX
   ## combined shapeembed + efd + regionprops
   #logger.info(f'-- shapeembed + efd + regionprops --')
@@ -481,7 +499,7 @@ if __name__ == '__main__':
   if clargs.output_dir:
     params.output_dir = clargs.output_dir
   else:
-    params.output_dir = f'./{params.model_name}_{params.latent_dim}_{params.batch_size}_{params.dataset.name}_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}'
+    params.output_dir = f'./{job_str(params)}_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}'
 
   # XXX
   torch.set_float32_matmul_precision('medium')
