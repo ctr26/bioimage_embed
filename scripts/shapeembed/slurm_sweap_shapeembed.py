@@ -72,7 +72,10 @@ python3 shapeembed.py --wandb-project {wandb_project} --dataset {dataset[0]} {da
 ################################################################################
 
 def spawn_slurm_job(logger, slurm_out_dir, out_dir, dataset, model, compression_factor, batch_size, **kwargs):
-  jobname = f'shapeembed_{dataset[0]}_{model}_{compression_factor}_{batch_size}'
+  model_str = model
+  if kwargs:
+    model_str += f"_{'_'.join([f'{k}{v}' for k, v in kwargs.items()])}"
+  jobname = f'shapeembed-{dataset[0]}-{model_str}-{compression_factor}-{batch_size}'
   logger.info(f'spawning {jobname}')
   with open(f'{slurm_out_dir}/{jobname}.script', mode='w+') as fp:
     extra_args=[]
