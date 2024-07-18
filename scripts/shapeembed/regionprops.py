@@ -75,11 +75,11 @@ if __name__ == "__main__":
 
   logger.info(f'-- regionprops on {dataset.name}, raw\n{regionprops_df}')
   regionprops_df.to_csv(f"{clargs.output_dir}/{dataset.name}_regionprops_df.csv")
-  umap_plot(regionprops_df, f'{dataset.name}_regionprops_umap', outputdir=clargs.output_dir)
+  umap_plot(regionprops_df, f'{dataset.name}_regionprops', outputdir=clargs.output_dir)
 
   regionprops_cm, regionprops_score_df = score_dataframe(regionprops_df, 'regionprops')
 
   logger.info(f'-- regionprops on {dataset.name}, score\n{regionprops_score_df}')
   regionprops_score_df.to_csv(f"{clargs.output_dir}/{dataset.name}_regionprops_score_df.csv")
   logger.info(f'-- confusion matrix:\n{regionprops_cm}')
-  confusion_matrix_plot(regionprops_cm, f'{dataset.name}_regionprops_cm', clargs.output_dir)
+  confusion_matrix_plot(regionprops_cm, f'{dataset.name}_regionprops', clargs.output_dir)

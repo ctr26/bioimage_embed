@@ -73,11 +73,11 @@ if __name__ == "__main__":
 
   logger.info(f'-- efd on {dataset.name}, raw\n{efd_df}')
   efd_df.to_csv(f"{clargs.output_dir}/{dataset.name}_efd_df.csv")
-  umap_plot(efd_df, f'{dataset.name}_efd_umap', outputdir=clargs.output_dir)
+  umap_plot(efd_df, f'{dataset.name}_efd', outputdir=clargs.output_dir)
 
   efd_cm, efd_score_df = score_dataframe(efd_df, 'efd')
 
   logger.info(f'-- efd on {dataset.name}, score\n{efd_score_df}')
   efd_score_df.to_csv(f"{clargs.output_dir}/{dataset.name}_efd_score_df.csv")
   logger.info(f'-- confusion matrix:\n{efd_cm}')
-  confusion_matrix_plot(efd_cm, f'{dataset.name}_efd_cm', clargs.output_dir)
+  confusion_matrix_plot(efd_cm, f'{dataset.name}_efd', clargs.output_dir)

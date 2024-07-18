@@ -48,59 +48,6 @@ def run_kmeans(dataframe, random_seed=42):
   conf_mat = confusion_matrix(dataframe['class'], kmeans.labels_)
   return kmeans, accuracy, conf_mat
 
-def run_regionprops( dataset_params
-                   , properties = [ "area"
-                                  , "perimeter"
-                                  , "centroid"
-                                  , "major_axis_length"
-                                  , "minor_axis_length"
-                                  , "orientation" ] ):
-  # access the dataset
-  assert dataset_params.type == 'mask', f'unsupported dataset type {dataset_params.type}'
-  ds = datasets.ImageFolder(dataset_params.path, transforms.Grayscale(1))
-  # ... and run regionprops for the given properties for each image
-  dfs = []
-  logger.info(f'running regionprops on {dataset_params.name}')
-  logger.info(f'({dataset_params.path})')
-  for i, (img, lbl) in enumerate(tqdm.tqdm(ds)):
-    data = numpy.where(numpy.array(img)>20, 255, 0)
-    t = measure.regionprops_table(data, properties=properties)
-    df = pandas.DataFrame(t)
-    assert df.shape[0] == 1, f'More than one object in image #{i}'
-    df.index = [i]
-    df['class'] = lbl
-    #df.set_index("class", inplace=True)
-    dfs.append(df)
-  # concatenate results as a single dataframe and return it
-  df = pandas.concat(dfs)
-  return df
-
-def run_elliptic_fourier_descriptors(dataset_params, contour_size=512):
-  # access the dataset
-  assert dataset_params.type == 'mask'
-  ds = datasets.ImageFolder( dataset_params.path
-                           , transform=transforms.Compose([
-                               transforms.Grayscale(1)
-                             , ImageToCoords(contour_size) ]))
-  # ... and run efd on each image
-  dfs = []
-  logger.info(f'running efd on {dataset_params.name}')
-  logger.info(f'({dataset_params.path})')
-  for i, (img, lbl) in enumerate(tqdm.tqdm(ds)):
-    coeffs = pyefd.elliptic_fourier_descriptors(img, order=10, normalize=False)
-    norm_coeffs = pyefd.normalize_efd(coeffs)
-    df = pandas.DataFrame({
-      "norm_coeffs": norm_coeffs.flatten().tolist()
-    , "coeffs": coeffs.flatten().tolist()
-    }).T.rename_axis("coeffs")
-    df['class'] = lbl
-    df.set_index("class", inplace=True, append=True)
-    dfs.append(df)
-  # concatenate results as a single dataframe and return it
-  df = pandas.concat(dfs).xs('coeffs', level='coeffs')
-  df.reset_index(level='class', inplace=True)
-  return df
-
 def score_dataframe( df, name
                    , test_sz=0.2, rand_seed=42, shuffle=True, k_folds=5 ):
   # drop strings and python object columns
@@ -205,7 +152,7 @@ def umap_plot( df
   seaborn.despine(left=True, bottom=True)
   plt.tick_params(bottom=False, left=False, labelbottom=False, labelleft=False)
   plt.tight_layout()
-  plt.savefig(f"{outputdir}/umap_{name}.pdf")
+  plt.savefig(f"{outputdir}/{name}_umap.pdf")
   plt.close()
 
 def save_scores( scores_df
