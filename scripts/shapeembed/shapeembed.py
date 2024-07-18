@@ -64,7 +64,7 @@ dflt_params = types.SimpleNamespace(
   model_name='resnet18_vae'
 , dataset=types.SimpleNamespace(
     name='tiny_synthetic_shapes'
-  , path='/nfs/research/uhlmann/afoix/image_datasets/tiny_synthetic_shapes'
+  , path='/nfs/research/uhlmann/afoix/datasets/image_datasets/tiny_synthetic_shapes'
   , type='mask'
   )
 , batch_size=4
@@ -313,71 +313,50 @@ def main_process(params):
   # run predictions
   #################
   # ... and gather latent space
+  os.makedirs(f"{params.output_dir}/", exist_ok=True)
   logger.info(f'-- run predictions and extract latent space --')
   latent_space, shapeembed_df = run_predictions(
     trainer, model, dataloader
   , num_workers=params.num_workers
   )
   logger.debug(f'\n{shapeembed_df}')
-  # ... and prepare output directory and save latent space
-  os.makedirs(f"{params.output_dir}/", exist_ok=True)
-  np.save(f'{params.output_dir}/latent_space.npy', latent_space)
-  shapeembed_df.to_pickle(f'{params.output_dir}/latent_space.pkl')
+  np.save(f'{params.output_dir}/{params.dataset.name}_shapeembed_latent_space.npy', latent_space)
+  shapeembed_df.to_pickle(f'{params.output_dir}/{params.dataset.name}_shapeembed_latent_space.pkl')
+  shapeembed_df.to_csv(f"{params.output_dir}/{params.dataset.name}_shapeembed_df.csv")
   logger.info(f'-- generate shapeembed umap --')
-  umap_plot(shapeembed_df, 'shapeembed', outputdir=params.output_dir)
-
-  # gather metrics
-  ################
-  # score shape embed
+  umap_plot(shapeembed_df, f'{params.dataset.name}_shapeembed', outputdir=params.output_dir)
   logger.info(f'-- score shape embed --')
   shapeembed_cm, shapeembed_score_df = score_dataframe(shapeembed_df, f'shapeembed')
-  logger.info(f'-- shapeembed on input data')
-  logger.info(f'-- score:\n{shapeembed_score_df}')
+  logger.info(f'-- shapeembed on {params.dataset.name}, score\n{shapeembed_score_df}')
+  shapeembed_score_df.to_csv(f"{params.output_dir}/{params.dataset.name}_shapeembed_score_df.csv")
   logger.info(f'-- confusion matrix:\n{shapeembed_cm}')
-  confusion_matrix_plot(shapeembed_cm, 'shapeembed', params.output_dir)
-  # regionprops on input data and score
-  logger.info(f'-- regionprops on input data --')
-  regionprops_df = run_regionprops(params.dataset)
-  logger.debug(f'\n{regionprops_df}')
-  regionprops_cm, regionprops_score_df = score_dataframe(regionprops_df, 'regionprops')
-  logger.info(f'-- regionprops on input data')
-  logger.info(f'-- score:\n{regionprops_score_df}')
-  logger.info(f'-- confusion matrix:\n{regionprops_cm}')
-  confusion_matrix_plot(regionprops_cm, 'regionprops_cm', params.output_dir)
-  # elliptic fourier descriptors on input data and score
-  logger.info(f'-- elliptic fourier descriptors on input data --')
-  efd_df = run_elliptic_fourier_descriptors(params.dataset)
-  logger.debug(f'\n{efd_df}')
-  efd_cm, efd_score_df = score_dataframe(efd_df, 'efd')
-  logger.info(f'-- elliptic fourier descriptors on input data')
-  logger.info(f'-- score:\n{efd_score_df}')
-  logger.info(f'-- confusion matrix:\n{efd_cm}')
-  confusion_matrix_plot(efd_cm, 'efd', params.output_dir)
-  # combined shapeembed + efd + regionprops
-  logger.info(f'-- shapeembed + efd + regionprops --')
-  comb_df = pandas.concat([ shapeembed_df
-                          , efd_df.drop('class', axis=1)
-                          , regionprops_df.drop('class', axis=1) ], axis=1)
-  logger.debug(f'\n{comb_df}')
-  comb_cm, comb_score_df = score_dataframe(comb_df, 'combined_all')
-  logger.info(f'-- shapeembed + efd + regionprops on input data')
-  logger.info(f'-- score:\n{comb_score_df}')
-  logger.info(f'-- confusion matrix:\n{comb_cm}')
-  confusion_matrix_plot(comb_cm, 'combined_all', params.output_dir)
-  # XXX Not currently doing the kmeans
-  # XXX kmeans on input data and score
-  #logger.info(f'-- kmeans on input data --')
-  #kmeans, accuracy, conf_mat = run_kmeans(dataloader_to_dataframe(dataloader.predict_dataloader()))
-  #print(kmeans)
-  #logger.info(f'-- kmeans accuracy: {accuracy}')
-  #logger.info(f'-- kmeans confusion matrix:\n{conf_mat}')
+  confusion_matrix_plot(shapeembed_cm, f'{params.dataset.name}_shapeembed', params.output_dir)
+  # XXX TODO move somewhere else if desired XXX
+  ## combined shapeembed + efd + regionprops
+  #logger.info(f'-- shapeembed + efd + regionprops --')
+  #comb_df = pandas.concat([ shapeembed_df
+  #                        , efd_df.drop('class', axis=1)
+  #                        , regionprops_df.drop('class', axis=1) ], axis=1)
+  #logger.debug(f'\n{comb_df}')
+  #comb_cm, comb_score_df = score_dataframe(comb_df, 'combined_all')
+  #logger.info(f'-- shapeembed + efd + regionprops on input data')
+  #logger.info(f'-- score:\n{comb_score_df}')
+  #logger.info(f'-- confusion matrix:\n{comb_cm}')
+  #confusion_matrix_plot(comb_cm, 'combined_all', params.output_dir)
+  ## XXX Not currently doing the kmeans
+  ## XXX kmeans on input data and score
+  ##logger.info(f'-- kmeans on input data --')
+  ##kmeans, accuracy, conf_mat = run_kmeans(dataloader_to_dataframe(dataloader.predict_dataloader()))
+  ##print(kmeans)
+  ##logger.info(f'-- kmeans accuracy: {accuracy}')
+  ##logger.info(f'-- kmeans confusion matrix:\n{conf_mat}')
 
-  # collate and save gathered results TODO KMeans
-  scores_df = pandas.concat([ regionprops_score_df
-                            , efd_score_df
-                            , shapeembed_score_df
-                            , comb_score_df ])
-  save_scores(scores_df, outputdir=params.output_dir)
+  ## collate and save gathered results TODO KMeans
+  #scores_df = pandas.concat([ regionprops_score_df
+  #                          , efd_score_df
+  #                          , shapeembed_score_df
+  #                          , comb_score_df ])
+  #save_scores(scores_df, outputdir=params.output_dir)
 
 # main entry point
 ###############################################################################
