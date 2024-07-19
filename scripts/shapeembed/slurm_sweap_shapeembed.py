@@ -66,7 +66,7 @@ echo "  - dataset {dataset[0]} ({dataset[1]}, {dataset[2]})"
 echo "  - model {model} ({model_params})"
 echo "  - compression_factor {compression_factor}"
 echo "  - batch size {batch_size}"
-python3 shapeembed.py --wandb-project {wandb_project} --dataset {dataset[0]} {dataset[1]} {dataset[2]} --model {model} --compression-factor {compression_factor} --batch-size {batch_size} --clear-checkpoints --output-dir {out_dir} {extra_args}
+python3 shapeembed.py --no-early-stop --wandb-project {wandb_project} --dataset {dataset[0]} {dataset[1]} {dataset[2]} --model {model} --compression-factor {compression_factor} --batch-size {batch_size} --clear-checkpoints --output-dir {out_dir} {extra_args}
 """
 
 ################################################################################
