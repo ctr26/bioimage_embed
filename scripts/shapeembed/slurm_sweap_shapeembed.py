@@ -44,7 +44,7 @@ model_params = {
 , "resnet50_beta_vae": {'beta': [1,2,5,10,20]}
 }
 
-compression_factors = [1,2,3,5,10,20]
+compression_factors = [1,2,3,5,10]
 
 batch_sizes = [4, 8, 16]
 
