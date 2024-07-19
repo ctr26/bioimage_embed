@@ -55,7 +55,7 @@ dflt_slurm_dir=f'{os.getcwd()}/slurm_info_{datetime.datetime.now().strftime("%Y%
 dflt_out_dir=f'{os.getcwd()}/output_results_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}'
 
 slurm_time = '50:00:00'
-slurm_mem = '200G'
+slurm_mem = '250G'
 slurm_gpus = 'a100:1'
 
 wandb_project='shapeembed'
