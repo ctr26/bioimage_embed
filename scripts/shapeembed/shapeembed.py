@@ -104,7 +104,7 @@ def compressed_n_features(dist_mat_size, comp_fact):
 
 def model_str(params):
   s = f'{params.model_name}'
-  if vars(params.model_args):
+  if hasattr(params, 'model_args'):
     s += f"-{'_'.join([f'{k}{v}' for k, v in vars(params.model_args).items()])}"
   return s
 
