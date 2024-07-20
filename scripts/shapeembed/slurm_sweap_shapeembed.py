@@ -11,7 +11,7 @@ import datetime
 import itertools
 import subprocess
 
-import shapeembed
+from common_helpers import *
 
 # shapeembed parameters to sweap
 ################################################################################
@@ -59,7 +59,7 @@ def gen_params_sweap_list():
   for params in [ { 'dataset': types.SimpleNamespace(name=ds[0], path=ds[1], type=ds[2])
                   , 'model_name': m
                   , 'compression_factor': cf
-                  , 'latent_dim': shapeembed.compressed_n_features(512, cf)
+                  , 'latent_dim': compressed_n_features(512, cf)
                   , 'batch_size': bs
                   } for ds in datasets
                     for m in models
@@ -119,34 +119,9 @@ python3 shapeembed.py --wandb-project {wandb_project} --dataset {dataset[0]} {da
 
 ################################################################################
 
-def model_params_from_model_params_str(modelparamsstr):
-  rawps = modelparamsstr.split('_')
-  ps = {}
-  for p in rawps:
-    if p[0:4] == 'beta': ps['beta'] = float(p[4:])
-  return types.SimpleNamespace(**ps)
-
-def params_from_job_str(jobstr):
-  raw = jobstr.split('-')
-  ps = {}
-  ps['batch_size'] = int(raw.pop())
-  ps['latent_dim'] = int(raw.pop())
-  ps['compression_factor'] = int(raw.pop())
-  if len(raw) == 3:
-    ps['model_args'] = model_params_from_model_params_str(raw.pop())
-  ps['model_name'] = raw.pop()
-  ps['dataset'] = raw.pop()
-  return types.SimpleNamespace(**ps)
-
-def find_done_params(out_dir):
-  ps = []
-  for f in glob.glob(f'{out_dir}/*-shapeembed-score_df.csv'):
-    ps.append(params_from_job_str(os.path.basename(f)[:-24]))
-  return ps
-
 def spawn_slurm_job(slurm_out_dir, out_dir, ps, logger=logging.getLogger(__name__)):
 
-  jobname = shapeembed.job_str(ps)
+  jobname = job_str(ps)
   cmd = [ 'python3', shapeembed_script
         , '--wandb-project', wandb_project
         , '--output-dir', out_dir
@@ -203,16 +178,17 @@ if __name__ == "__main__":
   clargs=parser.parse_args()
 
   # set verbosity level
+  logging.basicConfig()
   logger = logging.getLogger(__name__)
-  if clargs.verbose > 2:
-    logger.setLevel(logging.DEBUG)
+  if clargs.verbose > 1:
+    logger.setLevel('DEBUG')
   elif clargs.verbose > 0:
-    logger.setLevel(logging.INFO)
+    logger.setLevel('INFO')
 
   os.makedirs(clargs.slurm_output_dir, exist_ok=True)
   os.makedirs(clargs.output_dir, exist_ok=True)
 
-  done_params = find_done_params(clargs.output_dir)
+  done_params = find_existing_run_scores(clargs.output_dir)
   all_params  = gen_params_sweap_list()
   todo_params = [x for x in all_params if not params_match(x, done_params)]
   for ps in todo_params:

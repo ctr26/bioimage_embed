@@ -27,6 +27,8 @@ import bioimage_embed.shapes
 from dataset_transformations import *
 from evaluation import *
 
+from common_helpers import *
+
 # logging facilities
 ###############################################################################
 logger = logging.getLogger(__name__)
@@ -98,18 +100,6 @@ dflt_params = types.SimpleNamespace(
 , t_max=50
 , cycle_momentum=False
 )
-
-def compressed_n_features(dist_mat_size, comp_fact):
-  return dist_mat_size*(dist_mat_size-1)//(2**comp_fact)
-
-def model_str(params):
-  s = f'{params.model_name}'
-  if hasattr(params, 'model_args'):
-    s += f"-{'_'.join([f'{k}{v}' for k, v in vars(params.model_args).items()])}"
-  return s
-
-def job_str(params):
-  return f"{params.dataset.name}-{model_str(params)}-{params.compression_factor}-{params.latent_dim}-{params.batch_size}"
 
 def tag_cols(params):
   cols = []
