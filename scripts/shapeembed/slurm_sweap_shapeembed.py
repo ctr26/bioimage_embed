@@ -66,7 +66,7 @@ echo "  - dataset {dataset[0]} ({dataset[1]}, {dataset[2]})"
 echo "  - model {model} ({model_params})"
 echo "  - compression_factor {compression_factor}"
 echo "  - batch size {batch_size}"
-python3 shapeembed.py --no-early-stop --wandb-project {wandb_project} --dataset {dataset[0]} {dataset[1]} {dataset[2]} --model {model} --compression-factor {compression_factor} --batch-size {batch_size} --clear-checkpoints --output-dir {out_dir} {extra_args}
+python3 shapeembed.py --wandb-project {wandb_project} --dataset {dataset[0]} {dataset[1]} {dataset[2]} --model {model} --compression-factor {compression_factor} --batch-size {batch_size} --clear-checkpoints --output-dir {out_dir} {extra_args}
 """
 
 ################################################################################
@@ -79,6 +79,9 @@ def spawn_slurm_job(logger, slurm_out_dir, out_dir, dataset, model, compression_
   logger.info(f'spawning {jobname}')
   with open(f'{slurm_out_dir}/{jobname}.script', mode='w+') as fp:
     extra_args=[]
+    extra_args.append('--no-early-stop')
+    extra_args.append('--num-epochs')
+    extra_args.append('150')
     for k, v in kwargs.items():
       extra_args.append(f'--model-arg-{k}')
       extra_args.append(f'{v}')
