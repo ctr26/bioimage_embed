@@ -117,6 +117,18 @@ def tag_cols(params):
   cols.append(('batch_size', params.batch_size))
   return cols
 
+def oom_retry(f, *args, n_oom_retries=1, logger=logging.getLogger(__name__), **kwargs):
+  try:
+    logger.info(f'Trying {f.__name__} within oom_retry, n_oom_retries = {n_oom_retries}')
+    return f(*args, **kwargs)
+  except RuntimeError as e:
+    if 'out of memory' in str(e) and n_oom_retries > 0:
+      logger.warning(f'{f.__name__} ran out of memory, retrying')
+      torch.cuda.empty_cache()
+      return oom_retry(f, *args, n_oom_retries=n_oom_retries-1, logger=logger, **kwargs)
+  else:
+    raise e
+
 # dataset loading functions
 ###############################################################################
 
@@ -319,15 +331,15 @@ def main_process(params):
 
   # setup
   #######
-  model = get_model(params)
-  trainer = get_trainer(model, params)
-  dataloader = get_dataloader(params)
+  model = oom_retry(get_model, params)
+  trainer = oom_retry(get_trainer, model, params)
+  dataloader = oom_retry(get_dataloader, params)
 
   # run actual work
   #################
-  train_model(trainer, model, dataloader)
-  validate_model(trainer, model, dataloader)
-  test_model(trainer, model, dataloader)
+  oom_retry(train_model, trainer, model, dataloader, n_oom_retries=2)
+  oom_retry(validate_model, trainer, model, dataloader)
+  oom_retry(test_model, trainer, model, dataloader)
 
   # run predictions
   #################
