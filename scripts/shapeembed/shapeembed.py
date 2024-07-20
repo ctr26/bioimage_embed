@@ -99,6 +99,9 @@ dflt_params = types.SimpleNamespace(
 , cycle_momentum=False
 )
 
+def compressed_n_features(dist_mat_size, comp_fact):
+  return dist_mat_size*(dist_mat_size-1)//(2**comp_fact)
+
 def model_str(params):
   s = f'{params.model_name}'
   if vars(params.model_args):
@@ -507,8 +510,7 @@ if __name__ == '__main__':
     params.distance_matrix_roll_probability = clargs.distance_matrix_roll_probability
   if clargs.compression_factor:
     params.compression_factor = clargs.compression_factor
-  n_features = lambda d, n: d*(d-1)//(2**n)
-  params.latent_dim = n_features(params.distance_matrix_size, params.compression_factor)
+  params.latent_dim = compressed_n_features(params.distance_matrix_size, params.compression_factor)
   if clargs.number_embeddings:
     params.num_embeddings = clargs.number_embeddings
   if clargs.number_hiddens:
