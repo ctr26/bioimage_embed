@@ -74,7 +74,8 @@ dflt_params = types.SimpleNamespace(
 , num_embeddings=1024
 , num_hiddens=1024
 , num_workers=8
-, epochs=150
+, min_epochs=50
+, max_epochs=150
 , pretrained=False
 , frobenius_norm=False
 , early_stop=False
@@ -251,8 +252,8 @@ def get_trainer(model, params):
   , accelerator="gpu"
   , accumulate_grad_batches=4
   , callbacks=trainer_callbacks
-  , min_epochs=50
-  , max_epochs=params.epochs
+  , min_epochs=params.min_epochs
+  , max_epochs=params.max_epochs
   , log_every_n_steps=1
   )
 
@@ -454,8 +455,14 @@ if __name__ == '__main__':
       '-n', '--num-workers', metavar='NUM_WORKERS', type=auto_pos_int
     , help=f"The NUM_WORKERS for the run, a positive integer (default {dflt_params.num_workers})")
   parser.add_argument(
+      '--min-epochs', metavar='MIN_EPOCHS', type=auto_pos_int
+    , help=f"Set the MIN_EPOCHS for the run, a positive integer (default {dflt_params.min_epochs})")
+  parser.add_argument(
+      '--max-epochs', metavar='MAX_EPOCHS', type=auto_pos_int
+    , help=f"Set the MAX_EPOCHS for the run, a positive integer (default {dflt_params.max_epochs})")
+  parser.add_argument(
       '-e', '--num-epochs', metavar='NUM_EPOCHS', type=auto_pos_int
-    , help=f"The NUM_EPOCHS for the run, a positive integer (default {dflt_params.epochs})")
+    , help=f"Forces the NUM_EPOCHS for the run, a positive integer (sets both min and max epoch)")
   parser.add_argument('--clear-checkpoints', action='store_true'
     , help='remove checkpoints')
   parser.add_argument('-v', '--verbose', action='count', default=0
@@ -508,8 +515,13 @@ if __name__ == '__main__':
     params.num_hiddens = clargs.number_hiddens
   if clargs.num_workers:
     params.num_workers = clargs.num_workers
+  if clargs.min_epochs:
+    params.min_epochs = clargs.min_epochs
+  if clargs.max_epochs:
+    params.max_epochs = clargs.max_epochs
   if clargs.num_epochs:
-    params.epochs = clargs.num_epochs
+    params.min_epochs = clargs.num_epochs
+    params.max_epochs = clargs.num_epochs
   if clargs.output_dir:
     params.output_dir = clargs.output_dir
   else:
