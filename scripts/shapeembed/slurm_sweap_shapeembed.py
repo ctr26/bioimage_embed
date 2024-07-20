@@ -1,11 +1,17 @@
 #! /usr/bin/env python3
 
 import os
+import glob
+import copy
+import types
 import logging
+import tempfile
 import argparse
 import datetime
 import itertools
 import subprocess
+
+import shapeembed
 
 # shapeembed parameters to sweap
 ################################################################################
@@ -48,6 +54,47 @@ compression_factors = [1,2,3,5,10]
 
 batch_sizes = [4, 8, 16]
 
+def gen_params_sweap_list():
+  p_sweap_list = []
+  for params in [ { 'dataset': types.SimpleNamespace(name=ds[0], path=ds[1], type=ds[2])
+                  , 'model_name': m
+                  , 'compression_factor': cf
+                  , 'latent_dim': shapeembed.compressed_n_features(512, cf)
+                  , 'batch_size': bs
+                  } for ds in datasets
+                    for m in models
+                    for cf in compression_factors
+                    for bs in batch_sizes ]:
+    # per model params:
+    if params['model_name'] in model_params:
+      mps = model_params[params['model_name']]
+      for ps in [dict(zip(mps.keys(), vs)) for vs in itertools.product(*mps.values())]:
+        newparams = copy.deepcopy(params)
+        newparams['model_args'] = types.SimpleNamespace(**ps)
+        p_sweap_list.append(types.SimpleNamespace(**newparams))
+    else:
+      p_sweap_list.append(types.SimpleNamespace(**params))
+  return p_sweap_list
+
+def params_match(x, ys):
+  found = False
+  def check_model_args(a, b):
+    a_yes = hasattr(a, 'model_args')
+    b_yes = hasattr(b, 'model_args')
+    if not a_yes and not b_yes: return True
+    if a_yes and b_yes: return a.model_args == b.model_args
+    return False
+  for y in ys:
+    if x.dataset.name == y.dataset \
+      and x.model_name == y.model_name \
+      and check_model_args(x, y) \
+      and x.compression_factor == y.compression_factor \
+      and x.latent_dim == y.latent_dim \
+      and x.batch_size == y.batch_size:
+      found = True
+      break
+  return found
+
 # other parameters
 ################################################################################
 
@@ -58,6 +105,7 @@ slurm_time = '50:00:00'
 slurm_mem = '250G'
 slurm_gpus = 'a100:1'
 
+shapeembed_script=f'{os.getcwd()}/shapeembed.py'
 wandb_project='shapeembed'
 
 slurm_script="""#! /bin/bash
@@ -71,43 +119,70 @@ python3 shapeembed.py --wandb-project {wandb_project} --dataset {dataset[0]} {da
 
 ################################################################################
 
-def spawn_slurm_job(logger, slurm_out_dir, out_dir, dataset, model, compression_factor, batch_size, **kwargs):
-  model_str = model
-  if kwargs:
-    model_str += f"_{'_'.join([f'{k}{v}' for k, v in kwargs.items()])}"
-  jobname = f'shapeembed-{dataset[0]}-{model_str}-{compression_factor}-{batch_size}'
-  logger.info(f'spawning {jobname}')
-  with open(f'{slurm_out_dir}/{jobname}.script', mode='w+') as fp:
-    extra_args=[]
-    extra_args.append('--no-early-stop')
-    extra_args.append('--num-epochs')
-    extra_args.append('150')
-    for k, v in kwargs.items():
-      extra_args.append(f'--model-arg-{k}')
-      extra_args.append(f'{v}')
-    fp.write(slurm_script.format( dataset=dataset
-                                , model=model
-                                , model_params=[]
-                                , compression_factor=compression_factor
-                                , batch_size=batch_size
-                                , out_dir=out_dir
-                                , wandb_project=wandb_project
-                                , extra_args=' '.join(extra_args) ))
+def model_params_from_model_params_str(modelparamsstr):
+  rawps = modelparamsstr.split('_')
+  ps = {}
+  for p in rawps:
+    if p[0:4] == 'beta': ps['beta'] = float(p[4:])
+  return types.SimpleNamespace(**ps)
+
+def params_from_job_str(jobstr):
+  raw = jobstr.split('-')
+  ps = {}
+  ps['batch_size'] = int(raw.pop())
+  ps['latent_dim'] = int(raw.pop())
+  ps['compression_factor'] = int(raw.pop())
+  if len(raw) == 3:
+    ps['model_args'] = model_params_from_model_params_str(raw.pop())
+  ps['model_name'] = raw.pop()
+  ps['dataset'] = raw.pop()
+  return types.SimpleNamespace(**ps)
+
+def find_done_params(out_dir):
+  ps = []
+  for f in glob.glob(f'{out_dir}/*-shapeembed-score_df.csv'):
+    ps.append(params_from_job_str(os.path.basename(f)[:-24]))
+  return ps
+
+def spawn_slurm_job(slurm_out_dir, out_dir, ps, logger=logging.getLogger(__name__)):
+
+  jobname = shapeembed.job_str(ps)
+  cmd = [ 'python3', shapeembed_script
+        , '--wandb-project', wandb_project
+        , '--output-dir', out_dir
+        ]
+  cmd += [ '--clear-checkpoints'
+         , '--no-early-stop'
+         , '--num-epochs', 150
+         ]
+  cmd += [ '--dataset', ps.dataset.name, ps.dataset.path, ps.dataset.type
+         , '--model', ps.model_name
+         , '--compression-factor', ps.compression_factor
+         , '--batch-size', ps.batch_size
+         ]
+  if hasattr(ps, 'model_args'):
+    for k, v in vars(ps.model_args).items():
+      cmd.append(f'--model-arg-{k}')
+      cmd.append(f'{v}')
+  logger.debug(" ".join(map(str,cmd)))
+  with tempfile.NamedTemporaryFile('w+') as fp:
+    fp.write('#! /usr/bin/env sh\n')
+    fp.write(" ".join(map(str,cmd)))
+    fp.write('\n')
     fp.flush()
-    logger.info(f'written {fp.name}')
-    logger.debug(f'cat {fp.name}')
-    result = subprocess.run(['cat', fp.name], stdout=subprocess.PIPE)
+    cmd = [ 'sbatch'
+          , '--time', slurm_time
+          , '--mem', slurm_mem
+          , '--job-name', jobname
+          , '--output', f'{slurm_out_dir}/{jobname}.out'
+          , '--error', f'{slurm_out_dir}/{jobname}.err'
+          , f'--gpus={slurm_gpus}'
+          , fp.name ]
+    logger.debug(" ".join(map(str,cmd)))
+    result = subprocess.run(cmd, stdout=subprocess.PIPE)
     logger.debug(result.stdout.decode('utf-8'))
-    result = subprocess.run([ 'sbatch'
-                            , '--time', slurm_time
-                            , '--mem', slurm_mem
-                            , '--job-name', jobname
-                            , '--output', f'{slurm_out_dir}/{jobname}.out'
-                            , '--error', f'{slurm_out_dir}/{jobname}.err'
-                            #, '--gres', n_gpus(ls)
-                            , f'--gpus={slurm_gpus}'
-                            , fp.name ], stdout=subprocess.PIPE)
-    logger.info(result.stdout.decode('utf-8'))
+  logger.info(f'job spawned for {ps}')
+
 
 if __name__ == "__main__":
 
@@ -137,15 +212,8 @@ if __name__ == "__main__":
   os.makedirs(clargs.slurm_output_dir, exist_ok=True)
   os.makedirs(clargs.output_dir, exist_ok=True)
 
-  for params in [ (ds, m, cf, bs) for ds in datasets
-                                  for m in models
-                                  for cf in compression_factors
-                                  for bs in batch_sizes ]:
-    # per model params:
-    m = params[1]
-    if m in model_params:
-      mps = model_params[m]
-      for ps in [dict(zip(mps.keys(), vs)) for vs in itertools.product(*mps.values())]:
-        spawn_slurm_job(logger, clargs.slurm_output_dir, clargs.output_dir, *params, **ps)
-    else:
-      spawn_slurm_job(logger, clargs.slurm_output_dir, clargs.output_dir, *params)
+  done_params = find_done_params(clargs.output_dir)
+  all_params  = gen_params_sweap_list()
+  todo_params = [x for x in all_params if not params_match(x, done_params)]
+  for ps in todo_params:
+    spawn_slurm_job(clargs.slurm_output_dir, clargs.output_dir, ps, logger=logger)
