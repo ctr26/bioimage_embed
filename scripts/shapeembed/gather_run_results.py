@@ -37,6 +37,13 @@ def main_process(clargs, logger=logging.getLogger(__name__)):
     # open scores dataframe
     df = pd.read_csv(p.csv_file, index_col=0)
 
+    # split model column in case model args are present
+    model_cols = df['model'].str.split('-', n=1, expand=True)
+    if model_cols.shape[1] == 2:
+      df = df.drop('model', axis=1)
+      df.insert(1, 'model_args', model_cols[1])
+      df.insert(1, 'model', model_cols[0])
+
     # pair up with confusion matrix
     conf_mat_file = f'{job_str(p)}-shapeembed-confusion_matrix.png'
     print(f'{p.folder}/{conf_mat_file}')
