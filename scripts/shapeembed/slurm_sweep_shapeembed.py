@@ -13,7 +13,7 @@ import subprocess
 
 from common_helpers import *
 
-# shapeembed parameters to sweap
+# shapeembed parameters to sweep
 ################################################################################
 
 datasets_pfx = '/nfs/research/uhlmann/afoix/datasets/image_datasets'
@@ -64,8 +64,8 @@ batch_sizes = [4, 8, 16]
 #compression_factors = [10]
 #batch_sizes = [16]
 
-def gen_params_sweap_list():
-  p_sweap_list = []
+def gen_params_sweep_list():
+  p_sweep_list = []
   for params in [ { 'dataset': types.SimpleNamespace(name=ds[0], path=ds[1], type=ds[2])
                   , 'model_name': m
                   , 'compression_factor': cf
@@ -81,10 +81,10 @@ def gen_params_sweap_list():
       for ps in [dict(zip(mps.keys(), vs)) for vs in itertools.product(*mps.values())]:
         newparams = copy.deepcopy(params)
         newparams['model_args'] = types.SimpleNamespace(**ps)
-        p_sweap_list.append(types.SimpleNamespace(**newparams))
+        p_sweep_list.append(types.SimpleNamespace(**newparams))
     else:
-      p_sweap_list.append(types.SimpleNamespace(**params))
-  return p_sweap_list
+      p_sweep_list.append(types.SimpleNamespace(**params))
+  return p_sweep_list
 
 def params_match(x, ys):
   found = False
@@ -212,7 +212,7 @@ if __name__ == "__main__":
 
   done_params = find_existing_run_scores(clargs.output_dir)
   in_slurm_params = find_submitted_slurm_jobs()
-  all_params  = gen_params_sweap_list()
+  all_params  = gen_params_sweep_list()
 
   todo_params = all_params
   if clargs.filter_done:
