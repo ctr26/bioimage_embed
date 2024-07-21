@@ -9,15 +9,7 @@ import functools
 import pandas as pd
 
 from common_helpers import *
-
-# define a Custom aggregation  
-# function for finding total 
-def keep_first_fname(series): 
-  return functools.reduce(lambda x, y: y if x == 'nofile' else y, series)
-
-def get_run_info(run):
-  x = run.split('_')
-  return f'{x[0]}_{x[1]}', x[2], x[4]
+from evaluation import *
 
 def main_process(clargs, logger=logging.getLogger(__name__)):
 
@@ -76,11 +68,17 @@ def main_process(clargs, logger=logging.getLogger(__name__)):
   df = pd.concat(dfs)
   logger.debug(df)
   df.to_csv(f'{clargs.output_dir}/all_scores_df.csv', index=False)
+  save_barplot(df, clargs.output_dir)
 
   #df = df.iloc[:, 1:] # drop first column 'unnamed' for non-mean df
-  df.set_index(['dataset', 'trial', 'model', 'compression_factor', 'latent_dim', 'batch_size'], inplace=True)
+  # define a Custom aggregation
+  # function for finding total
+  def keep_first_fname(series): 
+    return functools.reduce(lambda x, y: y if x == 'nofile' else x, series)
+  df.set_index(['trial', 'dataset', 'model', 'compression_factor', 'latent_dim', 'batch_size'], inplace=True)
   df.sort_index(inplace=True)
-  df = df.groupby(level=['dataset', 'trial', 'model', 'compression_factor', 'latent_dim', 'batch_size']).agg({
+  #df = df.groupby(level=['trial', 'dataset', 'model', 'compression_factor', 'latent_dim', 'batch_size']).agg({
+  df = df.groupby(level=['trial', 'dataset', 'model', 'compression_factor', 'latent_dim', 'batch_size']).agg({
     'test_accuracy': 'mean'
   , 'test_precision': 'mean'
   , 'test_recall': 'mean'

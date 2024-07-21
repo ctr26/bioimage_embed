@@ -184,3 +184,51 @@ def save_scores( scores_df
                 .xs("test_f1", level="Metric", drop_level=False)
                 .groupby("trial")
                 .mean())
+
+def save_barplot( scores_df
+                , outputdir='.'
+                , width = 7
+                , height = 7 / 1.2 ):
+  # save a barplot representation of scores
+  melted_df = scores_df[['model', 'beta', 'compression_factor', 'batch_size', 'test_f1']].melt(
+    id_vars=['model', 'beta', 'compression_factor', 'batch_size']
+  , var_name="Metric"
+  , value_name="Score"
+  )
+  for m in melted_df['model'].unique():
+    for cf in melted_df['compression_factor'].unique():
+      if 'beta' in m:
+        for bs in melted_df['batch_size'].unique():
+          ax = seaborn.catplot( data=melted_df.loc[ (melted_df['model'] == m) & (melted_df['compression_factor'] == cf) & (melted_df['batch_size'] == bs)
+                                                  , ['beta', 'Metric', 'Score'] ]
+                              , kind="bar"
+                              , x='beta'
+                              , hue="Metric"
+                              , y="Score"
+                              , errorbar="se"
+                              , height=height
+                              , aspect=width * 2**0.5 / height )
+          ax.tick_params(axis='x', rotation=90)
+          ax.fig.subplots_adjust(top=0.9)
+          ax.set(title=f'f1 score against beta ({m}, compression factor {cf}, batch size {bs})')
+          plt.savefig(f"{outputdir}/beta_barplot_{m}_{cf}_{bs}.pdf")
+          plt.close()
+      ax = seaborn.catplot( data=melted_df.loc[ (melted_df['model'] == m) & (melted_df['compression_factor'] == cf)
+                                              , ['batch_size', 'beta', 'Metric', 'Score'] ]
+                          , kind="bar"
+                          , x='batch_size'
+                          , hue='beta' if 'beta' in m else 'Metric'
+                          , y="Score"
+                          , errorbar="se"
+                          , height=height
+                          , aspect=width * 2**0.5 / height )
+      ax.tick_params(axis='x', rotation=90)
+      ax.fig.subplots_adjust(top=0.9)
+      ax.set(title=f'f1 score against batch size ({m}, compression factor {cf})')
+      plt.savefig(f"{outputdir}/barplot_{m}_{cf}.pdf")
+      plt.close()
+  # log info
+  #logger.info(melted_df.set_index(["trial", "Metric"])
+  #              .xs("test_f1", level="Metric", drop_level=False)
+  #              .groupby("trial")
+  #              .mean())
