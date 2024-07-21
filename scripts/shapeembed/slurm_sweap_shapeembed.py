@@ -185,6 +185,14 @@ if __name__ == "__main__":
       '-o', '--output-dir', metavar='OUTPUT_DIR', default=dflt_out_dir
     , help=f"The OUTPUT_DIR path to use to dump results")
 
+  parser.add_argument(
+      '--filter-done', action=argparse.BooleanOptionalAction, default=True
+    , help=f'filter out jobs with results (a *scores_df.csv) in OUTPUT_DIR')
+
+  parser.add_argument(
+      '--filter-submitted', action=argparse.BooleanOptionalAction, default=True
+    , help=f'filter out jobs present in the current slurm `squeue`')
+
   parser.add_argument('-v', '--verbose', action='count', default=0
     , help="Increase verbosity level by adding more \"v\".")
 
@@ -203,7 +211,14 @@ if __name__ == "__main__":
   os.makedirs(clargs.output_dir, exist_ok=True)
 
   done_params = find_existing_run_scores(clargs.output_dir)
+  in_slurm_params = find_submitted_slurm_jobs()
   all_params  = gen_params_sweap_list()
-  todo_params = [x for x in all_params if not params_match(x, done_params)]
+
+  todo_params = all_params
+  if clargs.filter_done:
+    todo_params = [x for x in todo_params if not params_match(x, done_params)]
+  if clargs.filter_submitted:
+    todo_params = [x for x in todo_params if not params_match(x, in_slurm_params)]
+
   for ps in todo_params:
     spawn_slurm_job(clargs.slurm_output_dir, clargs.output_dir, ps, logger=logger)
