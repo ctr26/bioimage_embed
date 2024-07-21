@@ -105,6 +105,10 @@ def params_match(x, ys):
       break
   return found
 
+def find_submitted_slurm_jobs():
+  jobs = subprocess.run(['squeue', '--format', '%j'], stdout=subprocess.PIPE).stdout.decode('utf-8').split()
+  return list(map(params_from_job_str, jobs[1:]))
+
 # other parameters
 ################################################################################
 
