@@ -122,15 +122,6 @@ slurm_gpus = 'a100:1'
 shapeembed_script=f'{os.getcwd()}/shapeembed.py'
 wandb_project='shapeembed'
 
-slurm_script="""#! /bin/bash
-echo "running shape embed with:"
-echo "  - dataset {dataset[0]} ({dataset[1]}, {dataset[2]})"
-echo "  - model {model} ({model_params})"
-echo "  - compression_factor {compression_factor}"
-echo "  - batch size {batch_size}"
-python3 shapeembed.py --wandb-project {wandb_project} --dataset {dataset[0]} {dataset[1]} {dataset[2]} --model {model} --compression-factor {compression_factor} --batch-size {batch_size} --clear-checkpoints --output-dir {out_dir} {extra_args}
-"""
-
 ################################################################################
 
 def spawn_slurm_job(slurm_out_dir, out_dir, ps, logger=logging.getLogger(__name__)):
