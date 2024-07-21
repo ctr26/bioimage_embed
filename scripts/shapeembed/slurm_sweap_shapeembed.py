@@ -54,6 +54,16 @@ compression_factors = [1,2,3,5,10]
 
 batch_sizes = [4, 8, 16]
 
+# XXX XXX XXX XXX XXX XXX XXX #
+# XXX ad-hoc one-off config XXX #
+# XXX XXX XXX XXX XXX XXX XXX #
+# uncomment the lines below for a quick overwrite of the parameter sweep
+#datasets = [("synthetic_shapes", f"{datasets_pfx}/synthetic_shapes/", "mask")]
+#models = ["resnet50_vae"]
+#model_params = {} #{"resnet50_beta_vae": {'beta': [1]}}
+#compression_factors = [10]
+#batch_sizes = [16]
+
 def gen_params_sweap_list():
   p_sweap_list = []
   for params in [ { 'dataset': types.SimpleNamespace(name=ds[0], path=ds[1], type=ds[2])
