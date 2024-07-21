@@ -18,8 +18,6 @@ import logging
 import seaborn
 import matplotlib.pyplot as plt
 
-from bioimage_embed.shapes.transforms import ImageToCoords
-
 # logging facilities
 ###############################################################################
 logger = logging.getLogger(__name__)
