@@ -26,7 +26,7 @@ def params_from_job_str(jobstr):
     for p in raw.pop().split('-'):
       if p[0:4] == 'beta': ps.model_args.beta = float(p[4:])
   ps.model_name = raw.pop()
-  ps.dataset = raw.pop()
+  ps.dataset = types.SimpleNamespace(name=raw.pop())
   return ps
 
 def find_existing_run_scores(dirname, logger=logging.getLogger(__name__)):

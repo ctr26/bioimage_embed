@@ -95,7 +95,7 @@ def params_match(x, ys):
     if a_yes and b_yes: return a.model_args == b.model_args
     return False
   for y in ys:
-    if x.dataset.name == y.dataset \
+    if x.dataset.name == y.dataset.name \
       and x.model_name == y.model_name \
       and check_model_args(x, y) \
       and x.compression_factor == y.compression_factor \
