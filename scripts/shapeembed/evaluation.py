@@ -190,12 +190,50 @@ def save_barplot( scores_df
                 , width = 7
                 , height = 7 / 1.2 ):
   # save a barplot representation of scores
-  melted_df = scores_df[['model', 'beta', 'compression_factor', 'batch_size', 'test_f1']].melt(
-    id_vars=['model', 'beta', 'compression_factor', 'batch_size']
+  melted_df = scores_df[['model', 'beta', 'compression_factor', 'latent_dim', 'batch_size', 'test_f1']].melt(
+    id_vars=['model', 'beta', 'compression_factor', 'latent_dim', 'batch_size']
   , var_name="Metric"
   , value_name="Score"
   )
+  # test plots...
   for m in melted_df['model'].unique():
+    # 1 - general overview plot...
+    df = melted_df.loc[ (melted_df['model'] == m)
+                      , ['compression_factor', 'latent_dim', 'batch_size', 'beta', 'Metric', 'Score'] ].sort_values(by=['compression_factor', 'latent_dim', 'batch_size', 'beta'])
+    hue = df[['compression_factor', 'latent_dim']].apply(lambda r: f'cf: {r.compression_factor}({r.latent_dim})', axis=1)
+    if 'beta' in m:
+      hue = df[['compression_factor', 'latent_dim', 'beta']].apply(lambda r: f'cf: {r.compression_factor}({r.latent_dim}), beta: {r.beta}', axis=1)
+    ax = seaborn.catplot( data=df
+                        , kind="bar"
+                        , x='batch_size'
+                        , y="Score"
+                        , hue=hue
+                        , errorbar="se"
+                        , height=height
+                        , aspect=width * 2**0.5 / height )
+    #ax.tick_params(axis='x', rotation=90)
+    #ax.set(xlabel=None)
+    #ax.set(xticklabels=[])
+    ax._legend.remove()
+    #ax.fig.legend(loc='upper center', bbox_to_anchor=(0.5, 0.0), ncol=3)
+    #ax.fig.legend(ncol=4, loc='lower center')
+    ax.fig.legend(ncol=1)
+    #ax.fig.subplots_adjust(top=0.9)
+    #ax.set(title=f'f1 score against batch size ({m})')
+
+    #add overall title
+    plt.title(f'f1 score against batch size ({m})', fontsize=16)
+
+    ##add axis titles
+    #plt.xlabel('')
+    #plt.ylabel('')
+
+    #rotate x-axis labels
+    #plt.xticks(rotation=45)
+
+    plt.savefig(f"{outputdir}/barplot_{m}.pdf", bbox_inches="tight")
+    plt.close()
+    # 2 - more specific plots
     for cf in melted_df['compression_factor'].unique():
       if 'beta' in m:
         for bs in melted_df['batch_size'].unique():
