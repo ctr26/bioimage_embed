@@ -231,8 +231,46 @@ def save_barplot( scores_df
     #rotate x-axis labels
     #plt.xticks(rotation=45)
 
-    plt.savefig(f"{outputdir}/barplot_{m}.pdf", bbox_inches="tight")
+    plt.savefig(f"{outputdir}/barplot_{m}_x_bs.pdf", bbox_inches="tight")
     plt.close()
+
+    # 1b - general overview plot...
+    df = melted_df.loc[ (melted_df['model'] == m)
+                      , ['batch_size', 'compression_factor', 'latent_dim', 'beta', 'Metric', 'Score'] ].sort_values(by=['batch_size', 'compression_factor', 'latent_dim', 'beta'])
+    hue = df['batch_size'].apply(lambda r: f'bs: {r}')
+    if 'beta' in m:
+      hue = df[['batch_size', 'beta']].apply(lambda r: f'bs: {r.batch_size}, beta: {r.beta}', axis=1)
+    ax = seaborn.catplot( data=df
+                        , kind="bar"
+                        , x=df[['compression_factor', 'latent_dim']].apply(lambda r: f'cf: {r.compression_factor}({r.latent_dim})', axis=1)
+                        , y="Score"
+                        , hue=hue
+                        , errorbar="se"
+                        , height=height
+                        , aspect=width * 2**0.5 / height )
+    #ax.tick_params(axis='x', rotation=90)
+    #ax.set(xlabel=None)
+    #ax.set(xticklabels=[])
+    ax._legend.remove()
+    #ax.fig.legend(loc='upper center', bbox_to_anchor=(0.5, 0.0), ncol=3)
+    #ax.fig.legend(ncol=4, loc='lower center')
+    ax.fig.legend(ncol=1)
+    #ax.fig.subplots_adjust(top=0.9)
+    #ax.set(title=f'f1 score against batch size ({m})')
+
+    #add overall title
+    plt.title(f'f1 score against compression factor (latent space size) ({m})', fontsize=16)
+
+    ##add axis titles
+    #plt.xlabel('')
+    #plt.ylabel('')
+
+    #rotate x-axis labels
+    #plt.xticks(rotation=45)
+
+    plt.savefig(f"{outputdir}/barplot_{m}_x_cf.pdf", bbox_inches="tight")
+    plt.close()
+
     # 2 - more specific plots
     for cf in melted_df['compression_factor'].unique():
       if 'beta' in m:
@@ -263,7 +301,21 @@ def save_barplot( scores_df
       ax.tick_params(axis='x', rotation=90)
       ax.fig.subplots_adjust(top=0.9)
       ax.set(title=f'f1 score against batch size ({m}, compression factor {cf})')
-      plt.savefig(f"{outputdir}/barplot_{m}_{cf}.pdf")
+      plt.savefig(f"{outputdir}/barplot_{m}_x_bs_cf{cf}.pdf")
+      plt.close()
+      ax = seaborn.catplot( data=melted_df.loc[ (melted_df['model'] == m) & (melted_df['batch_size'] == cf)
+                                              , ['compression_factor', 'beta', 'Metric', 'Score'] ]
+                          , kind="bar"
+                          , x='compression_factor'
+                          , hue='beta' if 'beta' in m else 'Metric'
+                          , y="Score"
+                          , errorbar="se"
+                          , height=height
+                          , aspect=width * 2**0.5 / height )
+      ax.tick_params(axis='x', rotation=90)
+      ax.fig.subplots_adjust(top=0.9)
+      ax.set(title=f'f1 score against batch size ({m}, compression factor {cf})')
+      plt.savefig(f"{outputdir}/barplot_{m}_x_cf_bs{bs}.pdf")
       plt.close()
   # log info
   #logger.info(melted_df.set_index(["trial", "Metric"])
