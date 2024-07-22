@@ -58,6 +58,8 @@ class AutoEncoder(pl.LightningModule):
         # TODO update all models to use this for export to onxx
         # self.example_input_array = torch.randn(1, *self.model.input_dim)
         # self.model.train()
+        # keep a handle on metrics logged by the model
+        self.metrics = {}
 
     def forward(self, x):
         batch = ModelOutput(data=x.float())

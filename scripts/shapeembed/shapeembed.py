@@ -344,6 +344,9 @@ def main_process(params):
     trainer, model, dataloader
   , num_workers=params.num_workers
   )
+
+  # gather and log stats
+  ######################
   logger.debug(f'\n{shapeembed_df}')
   pfx=job_str(params)
   np.save(f'{params.output_dir}/{pfx}-shapeembed-latent_space.npy', latent_space)
@@ -352,7 +355,7 @@ def main_process(params):
   logger.info(f'-- generate shapeembed umap --')
   umap_plot(shapeembed_df, f'{pfx}-shapeembed', outputdir=params.output_dir)
   logger.info(f'-- score shape embed --')
-  shapeembed_cm, shapeembed_score_df = score_dataframe(shapeembed_df, pfx, tag_cols(params))
+  shapeembed_cm, shapeembed_score_df = score_dataframe(shapeembed_df, pfx, tag_cols(params)+[(k, v.item()) for k, v in model.metrics.items()])
   logger.info(f'-- shapeembed on {params.dataset.name}, score\n{shapeembed_score_df}')
   shapeembed_score_df.to_csv(f"{params.output_dir}/{pfx}-shapeembed-score_df.csv")
   logger.info(f'-- confusion matrix:\n{shapeembed_cm}')
