@@ -18,9 +18,10 @@ from common_helpers import *
 
 datasets_pfx = '/nfs/research/uhlmann/afoix/datasets/image_datasets'
 datasets = [
-  ("synthetic_shapes", f"{datasets_pfx}/synthetic_shapes/", "mask")
+#  ("synthetic_shapes", f"{datasets_pfx}/synthetic_shapes/", "mask")
 #  ("tiny_synthcell", f"{datasets_pfx}/tiny_synthcellshapes_dataset/", "mask")
-#  ("vampire", f"{datasets_pfx}/vampire/torchvision/Control/", "mask")
+  ("vampire", f"{datasets_pfx}/vampire/torchvision/Control/", "mask")
+, ("binary_vampire", f"{datasets_pfx}/binary_vampire/", "mask")
 #, ("bbbc010", f"{datasets_pfx}/bbbc010/BBBC010_v1_foreground_eachworm/", "mask")
 #, ("synthcell", f"{datasets_pfx}/synthcellshapes_dataset/", "mask")
 #, ("helakyoto", f"{datasets_pfx}/H2b_10x_MD_exp665/samples/", "mask")
@@ -28,14 +29,14 @@ datasets = [
 ]
 
 models = [
-  "resnet18_vae"
+  "resnet18_vqvae"
+, "resnet50_vqvae"
+, "resnet18_vae"
 , "resnet50_vae"
 , "resnet18_beta_vae"
 , "resnet50_beta_vae"
 #, "resnet18_vae_bolt"
 #, "resnet50_vae_bolt"
-, "resnet18_vqvae"
-, "resnet50_vqvae"
 #, "resnet18_vqvae_legacy"
 #, "resnet50_vqvae_legacy"
 #, "resnet101_vqvae_legacy"
@@ -46,8 +47,8 @@ models = [
 ]
 
 model_params = {
-  "resnet18_beta_vae": {'beta': [1,2,5,10,20]}
-, "resnet50_beta_vae": {'beta': [1,2,5,10,20]}
+  "resnet18_beta_vae": {'beta': [2,5]}
+, "resnet50_beta_vae": {'beta': [2,5]}
 }
 
 compression_factors = [1,2,3,5,10]
@@ -107,7 +108,7 @@ def params_match(x, ys):
 
 def find_submitted_slurm_jobs():
   jobs = subprocess.run(['squeue', '--format', '%j'], stdout=subprocess.PIPE).stdout.decode('utf-8').split()
-  return list(map(params_from_job_str, jobs[1:]))
+  return list(map(params_from_job_str, filter(lambda x: x, map(job_str_re().match, jobs[1:]))))
 
 # other parameters
 ################################################################################

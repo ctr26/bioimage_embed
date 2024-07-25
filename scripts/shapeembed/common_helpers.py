@@ -1,3 +1,4 @@
+import re
 import os
 import glob
 import types
@@ -14,6 +15,9 @@ def model_str(params):
 
 def job_str(params):
   return f"{params.dataset.name}-{model_str(params)}-{params.compression_factor}-{params.latent_dim}-{params.batch_size}"
+
+def job_str_re():
+  return re.compile("(.*)-(.*)-(\d+)-(\d+)-(\d+)")
 
 def params_from_job_str(jobstr):
   raw = jobstr.split('-')
