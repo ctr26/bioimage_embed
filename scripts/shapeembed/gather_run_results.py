@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import os
+import re
 import shutil
 import logging
 import argparse
@@ -10,6 +11,21 @@ import pandas as pd
 
 from common_helpers import *
 from evaluation import *
+
+def simple_table(df, tname, model_re=".*vq.*"):
+  cols=['model', 'compression_factor', 'latent_dim', 'batch_size', 'beta', 'test_f1']
+  df = df.loc[df.model.str.contains(model_re), cols].sort_values(by=cols)
+  df = df.sort_values(by='test_f1', ascending=False).iloc[:10]
+
+  with open(f'{tname}_tabular.tex', 'w') as fp:
+    fp.write("\\begin{tabular}{|llll|r|} \hline\n")
+    fp.write("Model & CF (and latent space size) & batch size & BETA & F1 score \\\\ \hline\n")
+    for _, r in df.iterrows():
+      mname = r['model'].replace('_','\_')
+      beta = '-' if pd.isna(r['beta']) else r['beta']
+      fp.write(f"{mname} & {r['compression_factor']} ({r['latent_dim']}) & {r['batch_size']} & {beta} & {r['test_f1']:.4f} \\\\\n")
+    fp.write("\hline\n")
+    fp.write("\end{tabular}\n")
 
 def main_process(clargs, logger=logging.getLogger(__name__)):
 
@@ -75,11 +91,13 @@ def main_process(clargs, logger=logging.getLogger(__name__)):
   # function for finding total
   def keep_first_fname(series): 
     return functools.reduce(lambda x, y: y if x == 'nofile' else x, series)
-  df.set_index(['trial', 'dataset', 'model', 'compression_factor', 'latent_dim', 'batch_size'], inplace=True)
+  idx_cols = ['trial', 'dataset', 'model', 'compression_factor', 'latent_dim', 'batch_size']
+  df.set_index(idx_cols, inplace=True)
   df.sort_index(inplace=True)
   #df = df.groupby(level=['trial', 'dataset', 'model', 'compression_factor', 'latent_dim', 'batch_size']).agg({
-  df = df.groupby(level=['trial', 'dataset', 'model', 'compression_factor', 'latent_dim', 'batch_size']).agg({
-    'test_accuracy': 'mean'
+  df = df.groupby(level=idx_cols).agg({
+    'beta': 'mean'
+  , 'test_accuracy': 'mean'
   , 'test_precision': 'mean'
   , 'test_recall': 'mean'
   , 'test_f1': 'mean'
@@ -92,6 +110,8 @@ def main_process(clargs, logger=logging.getLogger(__name__)):
   print(df)
   print('-'*80)
   df.to_csv(f'{clargs.output_dir}/all_scores_agg_df.csv')
+
+  simple_table(df.reset_index(), f'{clargs.output_dir}/simple_table')
 
 
   #cell_hover = {  # for row hover use <tr> instead of <td>
