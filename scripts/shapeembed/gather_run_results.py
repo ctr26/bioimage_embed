@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import logging
+import seaborn
 import argparse
 import datetime
 import functools
@@ -12,18 +13,44 @@ import pandas as pd
 from common_helpers import *
 from evaluation import *
 
-def simple_table(df, tname, model_re=".*vq.*"):
-  cols=['model', 'compression_factor', 'latent_dim', 'batch_size', 'beta', 'test_f1']
+#def simple_table(df, tname, model_re=".*vq.*"):
+def simple_table(df, tname, model_re=".*", sort_by_col=None, ascending=False, best_n=40):
+  cols=['model', 'compression_factor', 'latent_dim', 'batch_size', 'beta', 'test_f1', 'mse/test']
   df = df.loc[df.model.str.contains(model_re), cols].sort_values(by=cols)
-  df = df.sort_values(by='test_f1', ascending=False).iloc[:10]
+  if sort_by_col:
+    df = df.sort_values(by=sort_by_col, ascending=ascending)
+  df = df.iloc[:best_n]
 
   with open(f'{tname}_tabular.tex', 'w') as fp:
-    fp.write("\\begin{tabular}{|llll|r|} \hline\n")
-    fp.write("Model & CF (and latent space size) & batch size & BETA & F1 score \\\\ \hline\n")
+    fp.write("\\begin{tabular}{|llll|r|r|} \hline\n")
+    fp.write("Model & CF (and latent space size) & batch size & BETA & F1 score & Mse \\\\ \hline\n")
     for _, r in df.iterrows():
       mname = r['model'].replace('_','\_')
       beta = '-' if pd.isna(r['beta']) else r['beta']
-      fp.write(f"{mname} & {r['compression_factor']} ({r['latent_dim']}) & {r['batch_size']} & {beta} & {r['test_f1']:.4f} \\\\\n")
+      fp.write(f"{mname} & {r['compression_factor']} ({r['latent_dim']}) & {r['batch_size']} & {beta} & {r['test_f1']:f} & {r['mse/test']:f} \\\\\n")
+    fp.write("\hline\n")
+    fp.write("\end{tabular}\n")
+
+def compare_f1_mse_table(df, tname, best_n=40):
+  cols=['model', 'compression_factor', 'latent_dim', 'batch_size', 'beta', 'test_f1', 'mse/test']
+  df0 = df[cols].sort_values(by=cols)
+  df0 = df0.sort_values(by='test_f1', ascending=False)
+  df0 = df0.iloc[:best_n]
+  df1 = df[cols].sort_values(by=cols)
+  df1 = df1.sort_values(by='mse/test', ascending=True)
+  df1 = df1.iloc[:best_n]
+  df = pd.concat([df0.reset_index(), df1.reset_index()], axis=1, keys=['f1', 'mse'])
+  print(df)
+  with open(f'{tname}_tabular.tex', 'w') as fp:
+    fp.write("\\begin{tabular}{|llll|r|r|llll|r|r|} \hline\n")
+    fp.write("\multicolumn{6}{|l}{Best F1 score} & \multicolumn{6}{|l|}{Best Mse} \\\\\n")
+    fp.write("Model & CF (latent space) & batch size & BETA & F1 score & Mse & Model & CF (latent space) & batch size & BETA & F1 score & Mse \\\\ \hline\n")
+    for _, r in df.iterrows():
+      f1_name = r[('f1', 'model')].replace('_','\_')
+      mse_name = r[('mse', 'model')].replace('_','\_')
+      f1_beta = '-' if pd.isna(r[('f1', 'beta')]) else r[('f1', 'beta')]
+      mse_beta = '-' if pd.isna(r[('mse', 'beta')]) else r[('mse', 'beta')]
+      fp.write(f"{f1_name} & {r[('f1', 'compression_factor')]} ({r[('f1', 'latent_dim')]}) & {r[('f1', 'batch_size')]} & {f1_beta} & {r[('f1', 'test_f1')]:f} & {r[('f1', 'mse/test')]:f} & {mse_name} & {r[('mse', 'compression_factor')]} ({r[('mse', 'latent_dim')]}) & {r[('mse', 'batch_size')]} & {mse_beta} & {r[('mse', 'test_f1')]:f} & {r[('mse', 'mse/test')]:f} \\\\\n")
     fp.write("\hline\n")
     fp.write("\end{tabular}\n")
 
@@ -101,6 +128,10 @@ def main_process(clargs, logger=logging.getLogger(__name__)):
   , 'test_precision': 'mean'
   , 'test_recall': 'mean'
   , 'test_f1': 'mean'
+  , 'mse/test': 'mean'
+  , 'loss/test': 'mean'
+  , 'mse/val': 'mean'
+  , 'loss/val': 'mean'
   , 'conf_mat': keep_first_fname
   , 'umap': keep_first_fname
   #, 'barplot': keep_first_fname
@@ -110,9 +141,30 @@ def main_process(clargs, logger=logging.getLogger(__name__)):
   print(df)
   print('-'*80)
   df.to_csv(f'{clargs.output_dir}/all_scores_agg_df.csv')
+  df = df.reset_index()
 
-  simple_table(df.reset_index(), f'{clargs.output_dir}/simple_table')
+  # table results for f1 and mse comparison
+  simple_table(df, f'{clargs.output_dir}/table_top40_f1', sort_by_col='test_f1')
+  simple_table(df, f'{clargs.output_dir}/table_top40_mse', sort_by_col='mse/test', ascending=True)
+  compare_f1_mse_table(df, f'{clargs.output_dir}/table_top5_compare', best_n=5)
 
+  # mse / f1 plots
+  dff=df[df['mse/test']<df['mse/test'].quantile(0.9)] # drop mse outlier
+  #mse=df['mse/test']
+  #print(f'mse, mean: {mse.mean()}, std: {mse.std()}')
+  ax = seaborn.relplot(data=dff, x='mse/test', y='test_f1', hue='model', aspect=1.61)
+  ax.figure.savefig(f'{clargs.output_dir}/f1VSmse_scatter.png')
+
+  for m in df['model'].unique():
+    dff = df[df['model']==m]
+    print(m)
+    ax = seaborn.relplot(kind='line', data=dff.dropna(subset=['test_f1']), x='compression_factor', y='test_f1', hue='batch_size')
+    ax.figure.suptitle(f'{m}: f1 VS compression factor')
+    ax.figure.savefig(f'{clargs.output_dir}/{m}_f1VScompression_factor_line.png')
+    ax = seaborn.relplot(kind='line', data=dff.dropna(subset=['mse/test']), x='compression_factor', y='mse/test', hue='batch_size')
+    ax.figure.suptitle(f'{m}: Mse VS compression factor')
+    ax.figure.savefig(f'{clargs.output_dir}/{m}_mseVScompression_factor_line.png')
+    simple_table(dff, f'{clargs.output_dir}/{m}_summary_table')
 
   #cell_hover = {  # for row hover use <tr> instead of <td>
   #            'selector': 'td:hover',
