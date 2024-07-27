@@ -7,19 +7,25 @@ import argparse
 from skimage import measure
 
 # own imports
+#import bioimage_embed # necessary for the datamodule class to make sure we get the same test set
 from evaluation import *
 
-def run_regionprops( dataset_params
-                   , properties
-                   , logger ):
+def get_dataset(dataset_params):
   # access the dataset
   assert dataset_params.type == 'mask', f'unsupported dataset type {dataset_params.type}'
-  ds = datasets.ImageFolder(dataset_params.path, transforms.Grayscale(1))
-  # ... and run regionprops for the given properties for each image
+  dataset = datasets.ImageFolder(dataset_params.path, transforms.Grayscale(1))
+  return dataset
+  #dataloader = bioimage_embed.lightning.DataModule(dataset, shuffle=True)
+  #dataloader.setup()
+  #return dataloader.test
+
+def run_regionprops( dataset
+                   , properties
+                   , logger ):
+  # run regionprops for the given properties for each image
   dfs = []
-  logger.info(f'running regionprops on {dataset_params.name}')
-  logger.info(f'({dataset_params.path})')
-  for i, (img, lbl) in enumerate(tqdm.tqdm(ds)):
+  logger.info(f'running regionprops on {dataset}')
+  for i, (img, lbl) in enumerate(tqdm.tqdm(dataset)):
     data = numpy.where(numpy.array(img)>20, 255, 0)
     t = measure.regionprops_table(data, properties=properties)
     df = pandas.DataFrame(t)
@@ -75,7 +81,7 @@ if __name__ == "__main__":
 
   # regionprops on input data and score
 
-  regionprops_df = run_regionprops(dataset, properties, logger)
+  regionprops_df = run_regionprops(get_dataset(dataset), properties, logger)
 
   logger.info(f'-- regionprops on {dataset.name}, raw\n{regionprops_df}')
   regionprops_df.to_csv(f"{clargs.output_dir}/{dataset.name}-regionprops-raw_df.csv")
