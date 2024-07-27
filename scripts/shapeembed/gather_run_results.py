@@ -13,6 +13,17 @@ import pandas as pd
 from common_helpers import *
 from evaluation import *
 
+def trial_table(df, tname):
+  best_model = df.dropna(subset=['model']).sort_values(by='test_f1', ascending=False).iloc[0]
+  with open(f'{tname}_tabular.tex', 'w') as fp:
+    fp.write("\\begin{tabular}{|l|r|} \hline\n")
+    fp.write("Trial & F1 score \\\\ \hline\n")
+    name = best_model['trial'].replace('_','\_')
+    fp.write(f"{name} & {best_model['test_f1']} \\\\ \hline\n")
+    fp.write(f"regionprops & {df[df['trial'] == 'regionprops'].iloc[0]['test_f1']} \\\\ \hline\n")
+    fp.write(f"efd & {df[df['trial'] == 'efd'].iloc[0]['test_f1']} \\\\ \hline\n")
+    fp.write("\end{tabular}\n")
+
 #def simple_table(df, tname, model_re=".*vq.*"):
 def simple_table(df, tname, model_re=".*", sort_by_col=None, ascending=False, best_n=40):
   cols=['model', 'compression_factor', 'latent_dim', 'batch_size', 'beta', 'test_f1', 'mse/test']
@@ -56,6 +67,16 @@ def compare_f1_mse_table(df, tname, best_n=40):
 
 def main_process(clargs, logger=logging.getLogger(__name__)):
 
+  dfs = []
+
+  # regionprops / efd
+  for dirname in clargs.run_folders:
+    for f in glob.glob(f'{dirname}/*-regionprops-score_df.csv'):
+      dfs.append(pd.read_csv(f, index_col=0))
+    for f in glob.glob(f'{dirname}/*-efd-score_df.csv'):
+      dfs.append(pd.read_csv(f, index_col=0))
+
+  # shapeembed
   params = []
   for f in clargs.run_folders:
     ps = find_existing_run_scores(f)
@@ -66,7 +87,6 @@ def main_process(clargs, logger=logging.getLogger(__name__)):
 
   os.makedirs(clargs.output_dir, exist_ok=True)
 
-  dfs = []
   for p in params:
 
     # open scores dataframe
@@ -111,18 +131,18 @@ def main_process(clargs, logger=logging.getLogger(__name__)):
   df = pd.concat(dfs)
   logger.debug(df)
   df.to_csv(f'{clargs.output_dir}/all_scores_df.csv', index=False)
-  save_barplot(df, clargs.output_dir)
+  save_barplot(df.dropna(subset=['model']), clargs.output_dir)
 
   #df = df.iloc[:, 1:] # drop first column 'unnamed' for non-mean df
   # define a Custom aggregation
   # function for finding total
   def keep_first_fname(series): 
-    return functools.reduce(lambda x, y: y if x == 'nofile' else x, series)
+    return functools.reduce(lambda x, y: y if str(x) == 'nofile' else x, series)
   idx_cols = ['trial', 'dataset', 'model', 'compression_factor', 'latent_dim', 'batch_size']
   df.set_index(idx_cols, inplace=True)
   df.sort_index(inplace=True)
   #df = df.groupby(level=['trial', 'dataset', 'model', 'compression_factor', 'latent_dim', 'batch_size']).agg({
-  df = df.groupby(level=idx_cols).agg({
+  df = df.groupby(level=idx_cols, dropna=False).agg({
     'beta': 'mean'
   , 'test_accuracy': 'mean'
   , 'test_precision': 'mean'
@@ -147,6 +167,7 @@ def main_process(clargs, logger=logging.getLogger(__name__)):
   simple_table(df, f'{clargs.output_dir}/table_top40_f1', sort_by_col='test_f1')
   simple_table(df, f'{clargs.output_dir}/table_top40_mse', sort_by_col='mse/test', ascending=True)
   compare_f1_mse_table(df, f'{clargs.output_dir}/table_top5_compare', best_n=5)
+  trial_table(df, f'{clargs.output_dir}/trials')
 
   # mse / f1 plots
   dff=df[df['mse/test']<df['mse/test'].quantile(0.9)] # drop mse outlier
@@ -155,8 +176,9 @@ def main_process(clargs, logger=logging.getLogger(__name__)):
   ax = seaborn.relplot(data=dff, x='mse/test', y='test_f1', hue='model', aspect=1.61)
   ax.figure.savefig(f'{clargs.output_dir}/f1VSmse_scatter.png')
 
-  for m in df['model'].unique():
-    dff = df[df['model']==m]
+  dff = df.dropna(subset=['model'])
+  for m in dff['model'].unique():
+    dff = dff[dff['model']==m]
     print(m)
     ax = seaborn.relplot(kind='line', data=dff.dropna(subset=['test_f1']), x='compression_factor', y='test_f1', hue='batch_size')
     ax.figure.suptitle(f'{m}: f1 VS compression factor')
