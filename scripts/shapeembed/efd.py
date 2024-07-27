@@ -7,20 +7,27 @@ import logging
 import argparse
 
 # own imports
+#import bioimage_embed # necessary for the datamodule class to make sure we get the same test set
+from bioimage_embed.shapes.transforms import ImageToCoords
 from evaluation import *
 
-def run_elliptic_fourier_descriptors(dataset_params, contour_size, logger):
+def get_dataset(dataset_params):
   # access the dataset
-  assert dataset_params.type == 'mask'
-  ds = datasets.ImageFolder( dataset_params.path
-                           , transform=transforms.Compose([
-                               transforms.Grayscale(1)
-                             , ImageToCoords(contour_size) ]))
-  # ... and run efd on each image
+  assert dataset_params.type == 'mask', f'unsupported dataset type {dataset_params.type}'
+  dataset = datasets.ImageFolder( dataset_params.path
+                                , transform=transforms.Compose([
+                                    transforms.Grayscale(1)
+                                  , ImageToCoords(contour_size) ]))
+  return dataset
+  #dataloader = bioimage_embed.lightning.DataModule(dataset, shuffle=True)
+  #dataloader.setup()
+  #return dataloader.test
+
+def run_elliptic_fourier_descriptors(dataset, contour_size, logger):
+  # run efd on each image
   dfs = []
-  logger.info(f'running efd on {dataset_params.name}')
-  logger.info(f'({dataset_params.path})')
-  for i, (img, lbl) in enumerate(tqdm.tqdm(ds)):
+  logger.info(f'running efd on {dataset}')
+  for i, (img, lbl) in enumerate(tqdm.tqdm(dataset)):
     coeffs = pyefd.elliptic_fourier_descriptors(img, order=10, normalize=False)
     norm_coeffs = pyefd.normalize_efd(coeffs)
     df = pandas.DataFrame({
@@ -73,7 +80,7 @@ if __name__ == "__main__":
 
   # efd on input data and score
 
-  efd_df = run_elliptic_fourier_descriptors(dataset, contour_size, logger)
+  efd_df = run_elliptic_fourier_descriptors(get_dataset(dataset), contour_size, logger)
 
   logger.info(f'-- efd on {dataset.name}, raw\n{efd_df}')
   efd_df.to_csv(f"{clargs.output_dir}/{dataset.name}-efd-raw_df.csv")
