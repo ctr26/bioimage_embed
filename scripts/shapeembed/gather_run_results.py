@@ -187,15 +187,15 @@ def main_process(clargs, logger=logging.getLogger(__name__)):
 
   dff = df.dropna(subset=['model'])
   for m in dff['model'].unique():
-    dff = dff[dff['model']==m]
+    local_df = dff[dff['model']==m]
     print(m)
-    ax = seaborn.relplot(kind='line', data=dff.dropna(subset=['test_f1']), x='compression_factor', y='test_f1', hue='batch_size')
+    ax = seaborn.relplot(kind='line', data=local_df.dropna(subset=['test_f1']), x='compression_factor', y='test_f1', hue='batch_size')
     ax.figure.suptitle(f'{m}: f1 VS compression factor')
     ax.figure.savefig(f'{clargs.output_dir}/{m}_f1VScompression_factor_line.png')
-    ax = seaborn.relplot(kind='line', data=dff.dropna(subset=['mse/test']), x='compression_factor', y='mse/test', hue='batch_size')
+    ax = seaborn.relplot(kind='line', data=local_df.dropna(subset=['mse/test']), x='compression_factor', y='mse/test', hue='batch_size')
     ax.figure.suptitle(f'{m}: Mse VS compression factor')
     ax.figure.savefig(f'{clargs.output_dir}/{m}_mseVScompression_factor_line.png')
-    simple_table(dff, f'{clargs.output_dir}/{m}_summary_table')
+    simple_table(local_df, f'{clargs.output_dir}/{m}_summary_table')
 
   #cell_hover = {  # for row hover use <tr> instead of <td>
   #            'selector': 'td:hover',
