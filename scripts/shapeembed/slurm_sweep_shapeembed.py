@@ -20,8 +20,10 @@ datasets_pfx = '/nfs/research/uhlmann/afoix/datasets/image_datasets'
 datasets = [
 #  ("synthetic_shapes", f"{datasets_pfx}/synthetic_shapes/", "mask")
 #  ("tiny_synthcell", f"{datasets_pfx}/tiny_synthcellshapes_dataset/", "mask")
-  ("vampire", f"{datasets_pfx}/vampire/torchvision/Control/", "mask")
-, ("binary_vampire", f"{datasets_pfx}/binary_vampire/", "mask")
+#  ("vampire", f"{datasets_pfx}/vampire/torchvision/Control/", "mask")
+# ("vampire_cells", f"{datasets_pfx}/vampire_cells/", "mask")
+ ("vampire_nuclei", f"{datasets_pfx}/vampire_nuclei/", "mask")
+#, ("binary_vampire", f"{datasets_pfx}/binary_vampire/", "mask")
 #, ("bbbc010", f"{datasets_pfx}/bbbc010/BBBC010_v1_foreground_eachworm/", "mask")
 #, ("synthcell", f"{datasets_pfx}/synthcellshapes_dataset/", "mask")
 #, ("helakyoto", f"{datasets_pfx}/H2b_10x_MD_exp665/samples/", "mask")
@@ -202,14 +204,13 @@ if __name__ == "__main__":
   os.makedirs(clargs.slurm_output_dir, exist_ok=True)
   os.makedirs(clargs.output_dir, exist_ok=True)
 
-  done_params = find_existing_run_scores(clargs.output_dir)
-  in_slurm_params = find_submitted_slurm_jobs()
-  all_params  = gen_params_sweep_list()
+  todo_params  = gen_params_sweep_list()
 
-  todo_params = all_params
   if clargs.filter_done:
+    done_params = find_existing_run_scores(clargs.output_dir)
     todo_params = [x for x in todo_params if not params_match(x, done_params)]
   if clargs.filter_submitted:
+    in_slurm_params = find_submitted_slurm_jobs()
     todo_params = [x for x in todo_params if not params_match(x, in_slurm_params)]
 
   for ps in todo_params:
