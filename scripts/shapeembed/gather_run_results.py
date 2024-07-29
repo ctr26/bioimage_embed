@@ -116,6 +116,10 @@ def main_process(clargs, logger=logging.getLogger(__name__)):
     else:
       df['umap'] = f'nofile'
 
+    # NA desired columns if not already present
+    if 'beta' not in df.keys():
+      df['beta'] = pd.NA
+
     ## pair up with barplot
     #barplot = f'scores_barplot.pdf'
     #if os.path.isfile(f'{d}/{barplot}'):
@@ -166,8 +170,13 @@ def main_process(clargs, logger=logging.getLogger(__name__)):
   # table results for f1 and mse comparison
   simple_table(df, f'{clargs.output_dir}/table_top40_f1', sort_by_col='test_f1')
   simple_table(df, f'{clargs.output_dir}/table_top40_mse', sort_by_col='mse/test', ascending=True)
-  compare_f1_mse_table(df, f'{clargs.output_dir}/table_top5_compare', best_n=5)
-  trial_table(df, f'{clargs.output_dir}/trials')
+  # temporarily drop regionprops and efd rows for F1 and MSE comparison
+  dff = df[(df['trial'] != 'regionprops') & (df['trial'] != 'efd')]
+  compare_f1_mse_table(dff, f'{clargs.output_dir}/table_top5_compare', best_n=5)
+  if 'regionprops' in df['trial'].values and 'efd' in df['trial'].values:
+    trial_table(df, f'{clargs.output_dir}/trials')
+  else:
+    logger.info('skipped trial table comparison (need both regionprops and efd results)')
 
   # mse / f1 plots
   dff=df[df['mse/test']<df['mse/test'].quantile(0.9)] # drop mse outlier
