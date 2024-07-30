@@ -24,7 +24,7 @@ def run_regionprops( dataset
                    , logger ):
   # run regionprops for the given properties for each image
   dfs = []
-  logger.info(f'running regionprops on {dataset}')
+  logger.info(f'running regionprops on {dataset}, properties: {properties}')
   for i, (img, lbl) in enumerate(tqdm.tqdm(dataset)):
     data = numpy.where(numpy.array(img)>20, 255, 0)
     t = measure.regionprops_table(data, properties=properties)
@@ -54,6 +54,10 @@ if __name__ == "__main__":
                   , "orientation" ]
 
   parser.add_argument(
+      '-p', '--properties', metavar='PROP', default=dflt_properties, nargs='+'
+    , help=f"Overwrite the list of properties to consider (default: {dflt_properties})")
+
+  parser.add_argument(
       '-o', '--output-dir', metavar='OUTPUT_DIR', default='./'
     , help=f"The OUTPUT_DIR path to use to dump results")
 
@@ -74,7 +78,7 @@ if __name__ == "__main__":
   dataset = types.SimpleNamespace( name=clargs.dataset[0]
                                  , path=clargs.dataset[1]
                                  , type=clargs.dataset[2] )
-  properties = dflt_properties
+  properties = clargs.properties
 
   # create output dir if it does not exist
   os.makedirs(clargs.output_dir, exist_ok=True)
