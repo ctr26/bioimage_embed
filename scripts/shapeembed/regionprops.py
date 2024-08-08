@@ -2,6 +2,7 @@
 
 import os
 import types
+import random
 import logging
 import argparse
 from skimage import measure
@@ -13,11 +14,10 @@ from evaluation import *
 def get_dataset(dataset_params):
   # access the dataset
   assert dataset_params.type == 'mask', f'unsupported dataset type {dataset_params.type}'
-  dataset = datasets.ImageFolder(dataset_params.path, transforms.Grayscale(1))
+  raw_dataset = datasets.ImageFolder(dataset_params.path, transforms.Grayscale(1))
+  dataset = [x for x in raw_dataset]
+  random.shuffle(dataset)
   return dataset
-  #dataloader = bioimage_embed.lightning.DataModule(dataset, shuffle=True)
-  #dataloader.setup()
-  #return dataloader.test
 
 def run_regionprops( dataset
                    , properties

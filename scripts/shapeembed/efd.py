@@ -3,6 +3,7 @@
 import os
 import types
 import pyefd
+import random
 import logging
 import argparse
 
@@ -14,14 +15,13 @@ from evaluation import *
 def get_dataset(dataset_params):
   # access the dataset
   assert dataset_params.type == 'mask', f'unsupported dataset type {dataset_params.type}'
-  dataset = datasets.ImageFolder( dataset_params.path
-                                , transform=transforms.Compose([
-                                    transforms.Grayscale(1)
-                                  , ImageToCoords(contour_size) ]))
+  raw_dataset = datasets.ImageFolder( dataset_params.path
+                                    , transform=transforms.Compose([
+                                        transforms.Grayscale(1)
+                                      , ImageToCoords(contour_size) ]))
+  dataset = [x for x in raw_dataset]
+  random.shuffle(dataset)
   return dataset
-  #dataloader = bioimage_embed.lightning.DataModule(dataset, shuffle=True)
-  #dataloader.setup()
-  #return dataloader.test
 
 def run_elliptic_fourier_descriptors(dataset, contour_size, logger):
   # run efd on each image
