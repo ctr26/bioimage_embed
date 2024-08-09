@@ -181,7 +181,6 @@ def get_dataloader(params):
   dataloader = bioimage_embed.lightning.DataModule(
     dataset
   , batch_size=params.batch_size
-  , shuffle=True
   , num_workers=params.num_workers
   )
   dataloader.setup()
@@ -287,11 +286,10 @@ def test_model(trainer, model, dataloader):
 
 def run_predictions(trainer, model, dataloader, num_workers=8):
 
-  # prepare new unshuffled datamodule
+  # prepare batch size 1 datamodule
   datamod = bioimage_embed.lightning.DataModule(
     dataloader.dataset
   , batch_size=1
-  , shuffle=False
   , num_workers=num_workers
   )
   datamod.setup()
@@ -300,7 +298,7 @@ def run_predictions(trainer, model, dataloader, num_workers=8):
   predictions = trainer.predict(model, datamodule=datamod)
 
   # extract latent space
-  latent_space = torch.stack([d.out.z.flatten() for d in predictions]).numpy()
+  latent_space = torch.stack([o.z.flatten() for o in predictions]).numpy()
 
   # extract class indices and filenames and provide a richer pandas dataframe
   ds = datamod.get_dataset()
