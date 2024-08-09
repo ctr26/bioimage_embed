@@ -1,7 +1,7 @@
-# name: bioimage_embed
+#name: shapeembed
 channels:
 - conda-forge
-- defaults
+#- defaults
 - torch
 - bioconda
 dependencies:
@@ -12,6 +12,7 @@ dependencies:
 - gcc
 - libgcc
 - pytorch
+- wandb
 - pillow=9.5.0
 - pip
 - conda-forge::opencv
