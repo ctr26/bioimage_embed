@@ -17,20 +17,21 @@ def job_str(params):
   return f"{params.dataset.name}-{model_str(params)}-{params.compression_factor}-{params.latent_dim}-{params.batch_size}"
 
 def job_str_re():
-  return re.compile("(.*)-(.*)-(\d+)-(\d+)-(\d+)")
+  return re.compile("(.*?)-(.*?)(-beta(\d+))*?-(\d+)-(\d+)-(\d+)")
 
 def params_from_job_str(jobstr):
-  raw = jobstr.split('-')
+  raw_match = job_str_re().match(jobstr)
+  if not raw_match: return None
+  dataset_name, model_name, beta_arg, beta, cf, ld, bs = raw_match.groups()
   ps = types.SimpleNamespace()
-  ps.batch_size = int(raw.pop())
-  ps.latent_dim = int(raw.pop())
-  ps.compression_factor = int(raw.pop())
-  if len(raw) == 3:
+  ps.dataset = types.SimpleNamespace(name=dataset_name)
+  ps.model_name = model_name
+  if beta_arg and 'beta' in beta_arg and beta:
     ps.model_args = types.SimpleNamespace()
-    for p in raw.pop().split('-'):
-      if p[0:4] == 'beta': ps.model_args.beta = float(p[4:])
-  ps.model_name = raw.pop()
-  ps.dataset = types.SimpleNamespace(name=raw.pop())
+    ps.model_args.beta = float(beta)
+  ps.compression_factor = int(cf)
+  ps.latent_dim = int(ld)
+  ps.batch_size = int(bs)
   return ps
 
 def find_existing_run_scores(dirname, logger=logging.getLogger(__name__)):

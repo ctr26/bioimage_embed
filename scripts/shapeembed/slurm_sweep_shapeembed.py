@@ -109,8 +109,8 @@ def params_match(x, ys):
   return found
 
 def find_submitted_slurm_jobs():
-  jobs = subprocess.run(['squeue', '--format', '%j'], stdout=subprocess.PIPE).stdout.decode('utf-8').split()
-  return list(map(params_from_job_str, filter(lambda x: x, map(job_str_re().match, jobs[1:]))))
+  jobs = subprocess.run(['squeue', '--format', '%j'], stdout=subprocess.PIPE).stdout.decode('utf-8').split()[1:]
+  return list(filter(lambda x: x, map(params_from_job_str, jobs)))
 
 # other parameters
 ################################################################################
