@@ -21,8 +21,10 @@ datasets = [
 #  ("synthetic_shapes", f"{datasets_pfx}/synthetic_shapes/", "mask")
 #  ("tiny_synthcell", f"{datasets_pfx}/tiny_synthcellshapes_dataset/", "mask")
 #  ("vampire", f"{datasets_pfx}/vampire/torchvision/Control/", "mask")
-# ("vampire_cells", f"{datasets_pfx}/vampire_cells/", "mask")
- ("vampire_nuclei", f"{datasets_pfx}/vampire_nuclei/", "mask")
+# ("control_vampire_cells", f"{datasets_pfx}/vampire_cells/", "mask")
+# ("control_vampire_nuclei", f"{datasets_pfx}/vampire_nuclei/", "mask")
+#  ("mefs_cells", f"{datasets_pfx}/mefs_cells/", "mask")
+  ("mefs_nuclei", f"{datasets_pfx}/mefs_nuclei/", "mask")
 #, ("binary_vampire", f"{datasets_pfx}/binary_vampire/", "mask")
 #, ("bbbc010", f"{datasets_pfx}/bbbc010/BBBC010_v1_foreground_eachworm/", "mask")
 #, ("synthcell", f"{datasets_pfx}/synthcellshapes_dataset/", "mask")
@@ -33,10 +35,10 @@ datasets = [
 models = [
   "resnet18_vqvae"
 , "resnet50_vqvae"
-, "resnet18_vae"
-, "resnet50_vae"
-, "resnet18_beta_vae"
-, "resnet50_beta_vae"
+#, "resnet18_vae"
+#, "resnet50_vae"
+#, "resnet18_beta_vae"
+#, "resnet50_beta_vae"
 #, "resnet18_vae_bolt"
 #, "resnet50_vae_bolt"
 #, "resnet18_vqvae_legacy"
