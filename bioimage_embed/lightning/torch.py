@@ -55,6 +55,9 @@ class AutoEncoder(pl.LightningModule):
         if args:
             self.args = SimpleNamespace(**{**vars(args), **vars(self.args)})
         self.save_hyperparameters(vars(self.args))
+        # keep a handle on metrics logged by the model
+        self.metrics = {}
+
         # TODO update all models to use this for export to onxx
         # self.example_input_array = torch.randn(1, *self.model.input_dim)
         # self.model.train()
@@ -89,18 +92,23 @@ class AutoEncoder(pl.LightningModule):
     def training_step(self, batch: tuple, batch_idx: int) -> torch.Tensor:
         self.model.train()
         model_output = self.eval_step(batch, batch_idx)
-        self.log_dict(
+        metrics = (
             {
                 "loss/train": model_output.loss,
                 "mse/train": F.mse_loss(model_output.recon_x, model_output.data),
                 "recon_loss/train": model_output.recon_loss,
                 "variational_loss/train": model_output.loss - model_output.recon_loss,
             },
+        )
+        self.log_dict(
+            metrics,
             # on_step=True,
             on_epoch=True,
             prog_bar=True,
             logger=True,
         )
+        self.metrics = {**self.metrics, **metrics}
+
         if isinstance(self.logger, pl.loggers.TensorBoardLogger):
             self.log_tensorboard(model_output, model_output.data)
         return model_output.loss
